@@ -388,10 +388,10 @@ class Daemon(object):
 		This can be overwritten in subclasses to add more options.
 		"""
 
-		from . import  _version_
+		from . import  __version__
 
 		p = optparse.OptionParser(usage="usage: %prog [options] (start|stop|restart|run)",
-					  description="%prog daemon for pyonenet suite",version="%prog "+_version_)
+					  description="%prog daemon for pyonenet suite",version="%prog "+__version__)
 		p.add_option("--pidfile", dest="pidfile", help="PID filename (default %default)", default=self.options.pidfile)
 		p.add_option("--stdin", dest="stdin", help="stdin filename (default %default)", default=self.options.stdin)
 		p.add_option("--stdout", dest="stdout", help="stdout filename (default %default)", default=self.options.stdout)

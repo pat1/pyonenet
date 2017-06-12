@@ -4,6 +4,9 @@ import os
 from configobj import ConfigObj,flatten_errors
 from validate import Validator
 
+import logging
+logging.getLogger('django.db.backends').setLevel(logging.ERROR)
+
 
 import platform
 if platform.system() == "Linux":
@@ -34,15 +37,14 @@ configspec['django']['USE_I18N']="boolean(default=True)"
 configspec['django']['LOCALE_PATHS']="list(default=list('locale',))"
 configspec['django']['ADMINS']="list(default=list('',))"
 configspec['django']['MANAGERS']="list(default=list('',))"
-configspec['django']['MEDIA_ROOT']="string(default='media/')"
-configspec['django']['MEDIA_SITE_ROOT']="string(default='media/')"
-configspec['django']['TEMPLATE_DIRS']="list(default=list('templates',))"
+configspec['django']['MEDIA_ROOT']="string(default='%s/media/')" % os.getcwd()
+configspec['django']['MEDIA_SITE_ROOT']="string(default='%s/media/')" % os.getcwd()
 configspec['django']['MEDIA_URL']="string(default='/django/media/')"
 #configspec['django']['ADMIN_MEDIA_PREFIX']="string(default='/django/media/admin/')"
-configspec['django']['STATIC_URL']="string(default='/django/media/')"
-configspec['django']['STATIC_ROOT'] = "string(default='/usr/lib/python2.7/site-packages/django/contrib/admin/static/admin/')"
+configspec['django']['STATIC_URL']="string(default='/static/')"
+configspec['django']['STATIC_ROOT'] = "string(default='%s/static/')" % os.getcwd()
 configspec['django']['MEDIA_PREFIX']="string(default='/media/')"
-configspec['django']['SITE_MEDIA_PREFIX']="string(default='/media/sito/')"
+configspec['django']['MEDIA_SITE_PREFIX']="string(default='/media/sito/')"
 configspec['django']['SERVE_STATIC']="boolean(default=True)"
 configspec['django']['LOGIN_URL']="string(default='/login/')"
 
@@ -91,7 +93,6 @@ for entry in flatten_errors(config, test):
 
 # section django
 DEBUG                   = config['django']['DEBUG']
-TEMPLATE_DEBUG          = config['django']['TEMPLATE_DEBUG']
 FILE_UPLOAD_PERMISSIONS = config['django']['FILE_UPLOAD_PERMISSIONS']
 SECRET_KEY              = config['django']['SECRET_KEY']
 SESSION_COOKIE_DOMAIN   = config['django']['SESSION_COOKIE_DOMAIN']
@@ -106,7 +107,6 @@ ADMINS                  = config['django']['ADMINS']
 MANAGERS                = config['django']['MANAGERS']
 MEDIA_ROOT              = config['django']['MEDIA_ROOT']
 MEDIA_SITE_ROOT         = config['django']['MEDIA_SITE_ROOT']
-TEMPLATE_DIRS           = config['django']['TEMPLATE_DIRS']
 MEDIA_URL               = config['django']['MEDIA_URL']
 #ADMIN_MEDIA_PREFIX      = config['django']['ADMIN_MEDIA_PREFIX']
 STATIC_URL              = config['django']['STATIC_URL']
@@ -135,13 +135,15 @@ DATABASE_NAME     = config['database']['DATABASE_NAME']
 
 if (DATABASE_ENGINE == "mysql"):
     # alternative SETTINGS starting from django 1.2
-    # addend Isolation level 
+    # addend Isolation level
+    # changed from autoradio where works
+    #        'OPTIONS': {"init_command": "SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE"},
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.'+DATABASE_ENGINE,
-            'NAME':    DATABASE_NAME,
             'OPTIONS': {'init_command': 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
                         'connect_timeout':60}, 
+            'NAME':    DATABASE_NAME,
             'USER':    DATABASE_USER,
             'PASSWORD':DATABASE_PASSWORD,
             'HOST':    DATABASE_HOST,
@@ -160,21 +162,41 @@ else:
             }
         }
 
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-#    'django.template.loaders.app_directories.load_template_source',
-#     'django.template.loaders.eggs.load_template_source',
-)
+
+USE_TZ=False
+
+
+TEMPLATES= [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS'  : [],
+        'APP_DIRS' : True,
+        'OPTIONS': {
+            # List of callables that know how to import templates from various sources.
+            'context_processors': [
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+#                'django.core.context_processors.request',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+            ],
+            'debug' : config['django']['TEMPLATE_DEBUG']
+        }
+    }
+]
+
+
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.middleware.doc.XViewMiddleware',
-    'django.middleware.transaction.TransactionMiddleware',
+    'django.contrib.admindocs.middleware.XViewMiddleware',
+#    'django.middleware.transaction.TransactionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
@@ -183,11 +205,31 @@ ROOT_URLCONF = 'pyonenet.urls'
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.admin',
+    'django.contrib.staticfiles',
     'pyonenet.onenet',
     'pyonenet.oncron',
 ]
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'loggers': {
+        'django.db.backends': {
+            'level': 'INFO',
+            'propagate': True
+            },
+#        'django': {
+#            'level': 'DEBUG',
+#            'propagate': True
+#            },
+        }
+    }
+
+ALLOWED_HOSTS = ["*"]
 
 # if you have extension installed on your system you can add this lines
 # so you can have an image of your DB

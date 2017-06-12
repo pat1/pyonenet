@@ -1,12 +1,16 @@
 #!/usr/bin/env python
-# (C) 2010Paolo Patruno.
+#  (C) 2017  Paolo Patruno <p.patruno@iperbole.bologna.it>.
+
+import os
+import pyonenet.settings
+os.environ['DJANGO_SETTINGS_MODULE'] = 'pyonenet.settings'
+from django.conf import settings
 
 from pyonenet import daemon
-from pyonenet import _version_
+from pyonenet import __version__
 from django.core import management
-from django.core.management import setup_environ
 import pyonenet.pyonenet_config
-import pyonenet.pyonenet_core
+
 
 
 pyonenetweb = daemon.Daemon(
@@ -30,12 +34,14 @@ pyonenetweb = daemon.Daemon(
 def main(cwd):
 
     import os
+    import django
+    django.setup()
     try:
         os.chdir(cwd)
     except:
         pass
 
-    setup_environ(pyonenet.settings)
+
     management.call_command("runserver",pyonenet.settings.port,use_reloader=False)
 
 
@@ -46,7 +52,7 @@ if __name__ == '__main__':
 
     if pyonenetweb.service():
 
-        sys.stdout.write("Pyonenetweb version "+_version_+"\n")
+        sys.stdout.write("Pyonenetweb version "+__version__+"\n")
         sys.stdout.write("Daemon started with pid %d\n" % os.getpid())
         sys.stdout.write("Daemon stdout output\n")
         sys.stderr.write("Daemon stderr output\n")

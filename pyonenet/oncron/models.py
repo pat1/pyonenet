@@ -109,7 +109,7 @@ class PeriodicSchedule(models.Model):
     start_date = models.DateField(ugettext_lazy('Programmed start date'),null=True,blank=True)
     end_date = models.DateField(ugettext_lazy('Programmed end date'),null=True,blank=True)
     time = models.TimeField(ugettext_lazy('Programmed time'),null=True,blank=True)
-    giorni = models.ManyToManyField(Giorno,verbose_name=ugettext_lazy('Programmed days'),null=True,blank=True)
+    giorni = models.ManyToManyField(Giorno,verbose_name=ugettext_lazy('Programmed days'),blank=True)
     
     event_done = models.DateTimeField(ugettext_lazy('Event done')\
 			        ,null=True,editable=False )

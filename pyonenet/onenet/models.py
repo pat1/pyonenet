@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy,ugettext
+from django.utils import timezone
 
 from django.db.models import permalink
 #from pyonenet.tv.managers import EpisodeManager
@@ -73,6 +74,7 @@ CHANNEL_CHOICES=(
 	("25","Channel 25"),
 	)
 
+
 PRIORITY_CODES = (
     (1, ugettext_lazy('Urgent')),
     (2, ugettext_lazy('Normal')),
@@ -88,6 +90,7 @@ PINSTATE_CHOICES=(
 PROTOCOL_CHOICES=(
 	("onenet","One-net"),
 	("oneway","One-way"),
+	("jsrpc" ,"JSON-rpc"),
 	)
 
 class Zone(models.Model):
@@ -147,7 +150,7 @@ class Client(models.Model):
 
     active = models.BooleanField(ugettext_lazy("Attivo"),default=True)
 
-    lasttransaction = models.DateTimeField(ugettext_lazy('Data ultima transazione'),default=datetime.datetime.now(),editable=True)
+    lasttransaction = models.DateTimeField(ugettext_lazy('Data ultima transazione'),default=timezone.now,editable=True)
     laststatus = models.CharField(ugettext_lazy("stato dell'ultima transazione"),max_length=50,null=True,editable=True,default="SUCCESS")
 
     pin0state = models.CharField(ugettext_lazy("Pin 0 state"),max_length=7,choices=PINSTATE_CHOICES,null=True,default='output',editable=True)
@@ -233,7 +236,7 @@ class Ticket(models.Model):
     ticket = models.AutoField(primary_key=True,editable=False)
     aperto = models.BooleanField(ugettext_lazy("Risolto"),default=False,help_text='To set when solved only')
 #    date = models.DateTimeField('Data inserimento',auto_now_add=True,editable=False)
-    date = models.DateTimeField(ugettext_lazy('Open data'),default=datetime.datetime.now)
+    date = models.DateTimeField(ugettext_lazy('Open data'),default=timezone.now)
     priorita = models.IntegerField(ugettext_lazy('Priority'),default=2, choices=PRIORITY_CODES)
     nome = models.CharField(ugettext_lazy('User name'),null=True,max_length=40)
     descrizione= models.CharField(ugettext_lazy('Problem description'),max_length=80)
@@ -257,7 +260,7 @@ class Action(models.Model):
 
     ticket = models.ForeignKey(Ticket)
 #    last_date = models.DateTimeField('Data ultima azione',auto_now=True,blank=True,editable=True)
-    last_date = models.DateTimeField(ugettext_lazy('Last action description'),default=datetime.datetime.now)
+    last_date = models.DateTimeField(ugettext_lazy('Last action description'),default=timezone.now)
     last_descrizione= models.CharField(ugettext_lazy('Last action description'),max_length=80,blank=True)
 
 

@@ -24,28 +24,44 @@ def check4exit(status):
 
 try:
     from django.core import management
-    from django.core.management import setup_environ
     from django.core.exceptions import ObjectDoesNotExist
     dj=True
+
 except:
     print "Django is missing: working without DataBase"
     dj=False
 
 import sys, os, traceback, optparse, pickle
 import pyonenet.pyonenet_config, pyonenet.daemon
-from pyonenet import  _version_
+from pyonenet import  __version__
 
 import ocm.master_on
 import ocm.master_ow
+import ocm.master_jsrpc
 import ocm.client_on
 import ocm.client_ow
-
-from pyonenet.onenet.models import Master as DBmaster 
-from pyonenet.onenet.models import Client as DBclient
+import ocm.client_jsrpc
 
 
+if dj :
+    import pyonenet.settings
+    #setup_environ(pyonenet.settings)
+    import os
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'pyonenet.settings'
+    #from django.conf import settings
+    import django
+
+    # go to share dir for virtualenv
+    ve=os.getenv("VIRTUAL_ENV")
+    if ve is not None:
+        os.chdir(ve+"/share/pyonenet")
+
+    django.setup()
+
+    from pyonenet.onenet.models import Master as DBmaster 
+    from pyonenet.onenet.models import Client as DBclient
+        
 def onenetctrl(cwd):
-
 
     import platform
     if platform.system() == "Linux":
@@ -56,10 +72,10 @@ def onenetctrl(cwd):
         clientdevice = "COM2"
 
 
-    p = optparse.OptionParser(usage="usage: %prog [options]",version="%prog "+_version_)
+    p = optparse.OptionParser(usage="usage: %prog [options]",version="%prog "+__version__)
 
     p.add_option("--protocol", action="store", type="string", help=\
-                     "choise the protocol to use ('onenet' or 'oneway'",default="onenet")
+                     "choise the protocol to use ('onenet' or 'oneway or jsrpc'",default="jsrpc")
     p.add_option("--join", action="store_true", help=\
                      "join a client in the master network (default %default)", default=False)
     p.add_option("--remove", action="store_true", help=\
@@ -72,7 +88,7 @@ def onenetctrl(cwd):
     p.add_option("--nid", action="store", type="string", help=\
                      "network identification")
     p.add_option("--pinnumber", action="store", type="int", help=\
-                     "User Pin Number, integer value (1-255)")
+                     "User Pin Number, integer value (0-254)")
     p.add_option("--pinstate", action="store", type="string", help=\
                      "Pin State, 'input', 'output', or 'disable'")
     p.add_option("--pinonoff", action="store", type="int", help=\
@@ -81,12 +97,17 @@ def onenetctrl(cwd):
                      "invite code")
     p.add_option("--setni", action="store_true", help=\
                      "initialize the board with NID and invitecode",default=False)
+    p.add_option("--setdid", action="store_true", help=\
+                     "initialize the board with DID",default=False)
+    p.add_option("--changedid", action="store_true", help=\
+                     "change the DID of the remote board",default=False)
     p.add_option("--userpin", action="store_true", help=\
                      "configure individual input/output pins",default=False)
     p.add_option("--region", action="store", type="string", help=\
                      "restarts the device as a Master on the given channel",default=None)
     p.add_option("--channel", action="store", type="int", help="change channel region",default=None)
-    p.add_option("--did", action="store", type="int", help="client did")
+    p.add_option("--did", action="store", type="int", help="client did", default=None)
+    p.add_option("--olddid", action="store", type="int", help="client did to change with --changedid", default=None)
     p.add_option("--single", action="store_true", help=\
                      "single command to client",default=False)
     p.add_option("--masterdevice", action="store", type="string", help=\
@@ -98,6 +119,7 @@ def onenetctrl(cwd):
     p.add_option("--memload", action="store_true", help="restore board status",default=False)
     p.add_option("--erase", action="store_true", help="erase flash memory on board",default=False)
     p.add_option("--save", action="store_true", help="save data on flash memory on board",default=False)
+    p.add_option("--remotesave", action="store_true", help="save data on flash memory on the remote board",default=False)
     p.add_option("--master", action="store_true", help="do action on the master board",default=False)
     p.add_option("--client", action="store_true", help="do action on the client board",default=False)
     p.add_option("--receive", action="store_true", help="listen for messages",default=False)
@@ -107,6 +129,10 @@ def onenetctrl(cwd):
     if dj:
         p.add_option("--syncdb", action="store_true", help=\
                          "initialize Data Base (default %default)", default=False)
+        p.add_option("--dumpdata", action="store_true", help=\
+                         "dump Data Base (default %default)", default=False)
+        p.add_option("--loaddata", type="string",action="store", help=\
+                         "restore Data Base (default %default)", default=None)
         p.add_option("--changeuser", action="store_true", help=\
                          "change user to the user in config file (default %default)", default=False)
         p.add_option("--insertmaster", action="store_true", help="insert a master in DB", default=False)
@@ -121,6 +147,8 @@ def onenetctrl(cwd):
             options.insertmaster=False
             options.insert=False
             options.syncdb=False
+            options.dumpdata=False
+            options.loaddata=None
             options.changeuser=False
             options.fetchmaster=False
             options.fetch=False
@@ -129,27 +157,38 @@ def onenetctrl(cwd):
         return False
 
     if      not options.syncdb and\
+            not options.dumpdata and\
+            options.loaddata is None and\
             not options.master and\
-            not options.client :
+            not options.client and\
+            not options.setdid and\
+            not options.changedid and\
+            not options.save and\
+            not options.remotesave\
+            :
 
         p.print_help()
-        raise optparse.OptionValueError("you have to set one of --syncdb --master --client options")
+        raise optparse.OptionValueError("you have to set one of --syncdb --dumpdata --loaddata --master --client --setdid --chagedid --save --remotesave options")
 
 
     if (options.changeuser):
         dae=pyonenet.daemon.Daemon()
         dae.switchuser(user=pyonenet.pyonenet_config.user,group=pyonenet.pyonenet_config.group,env=None)
-        #try:
-        #    os.chdir(cwd)
-        #except:
-        #    pass
+        try:
+            os.chdir(cwd)
+        except:
+            pass
 
     if (options.syncdb):
-        setup_environ(pyonenet.settings)
-        management.call_command("syncdb")
+        management.call_command("migrate")
 
+    if (options.dumpdata):
+        management.call_command("dumpdata",exclude=["sessions","admin","contenttypes","auth.Permission"])
 
-    if dj : setup_environ(pyonenet.settings)
+    if (options.loaddata is not None):
+        print "loaddata",options.loaddata
+        management.call_command("loaddata",options.loaddata)
+
 
     if (options.protocol == "onenet") :
         master = ocm.master_on
@@ -157,8 +196,11 @@ def onenetctrl(cwd):
     elif (options.protocol == "oneway") :
         master = ocm.master_ow
         client = ocm.client_ow
+    elif (options.protocol == "jsrpc") :
+        master = ocm.master_jsrpc
+        client = ocm.client_jsrpc
     else:
-        raise optparse.OptionValueError("protocol is neither onenet or onewaay")
+        raise optparse.OptionValueError("protocol is neither onenet or onewaay or jsrpc")
 
     # check channel options
     if ((options.region is None) <> (options.channel is None)):
@@ -180,15 +222,15 @@ def onenetctrl(cwd):
             print "display ; return:",status
             check4exit(status)
 
-        if options.erase :
-            status = m.display()
-            print "CMD display; return:",status
+        if options.memdump :
+            status = m.cmd_memdump()
+            if status : status = m.display()
+            print "master memdumpdisplay ; return:",status
+            if status:
+                masterfile = open('master.pkl', 'wb')
+                pickle.dump(m._mem,masterfile)
+                masterfile.close()
             check4exit(status)
-            print "CMD erase"
-            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
-            if confirm == "Y" :
-                print "cmd erase ; return:",m.cmd_erase()
-                check4exit(status)
 
         if options.memload :
             masterfile = open('master.pkl', 'rb')
@@ -211,6 +253,16 @@ def onenetctrl(cwd):
             print "cmd cancel invite ; return:",status
             check4exit(status)
 
+        if options.erase :
+            status = m.display()
+            print "CMD display; return:",status
+            check4exit(status)
+            print "CMD erase"
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                print "cmd erase ; return:",m.cmd_erase()
+                check4exit(status)
+
         if options.setni :
             if options.nid is None <> options.invitecode is None:
                 raise optparse.OptionValueError("for option --setni you have to set --nid and --invitecode")
@@ -231,6 +283,40 @@ def onenetctrl(cwd):
             print "cmd pinnumber ; return:",status
             check4exit(status)
 
+        if options.setdid :
+            if options.did is None:
+                raise optparse.OptionValueError("for option --setdid you have to set --did")
+        
+            print "CMD setdid"
+            status=m.cmd_setdid(options.did)
+            print "cmd setdid ; return:",status
+            check4exit(status)
+        
+        if options.changedid :
+            if options.did is None or options.olddid is None:
+                raise optparse.OptionValueError("for option --changedid you have to set --olddid and --did ")
+
+            print "CMD changedid"
+            status=m.cmd_changedid(olddid=options.olddid,did=options.did)
+            print "cmd setdid ; return:",status
+            check4exit(status)
+
+        if options.save :
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                status=m.cmd_save()
+                print "cmd save ; return:",status
+                check4exit(status)
+
+        if options.remotesave :
+            if options.did is None:
+                raise optparse.OptionValueError("for option --remotesave you have to set --did")
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                status=m.cmd_remotesave(did=options.did)
+                print "cmd remotesave ; return:",status
+                check4exit(status)
+            
         if options.region :
             status = m.display()
             print "CMD display; return:",status
@@ -241,6 +327,19 @@ def onenetctrl(cwd):
                 status=m.cmd_channel(options.region,options.channel)
                 print "cmd channel ; return:",status
                 check4exit(status)
+
+        if options.insertmaster:
+
+            dbm=DBmaster(device=options.masterdevice,
+                         protocol=options.protocol,
+                         region=m.ana["region"],
+                         nid=m.ana["nid"],
+                         channel=m.ana["channel"],invite=m.ana["invitecode"],
+                         memdump_master_param  = m._mem["master_param"],
+                         memdump_client_list   = m._mem["client_list"],
+                         memdump_base_param    = m._mem["base_param"],
+                         memdump_peer          = m._mem["peer"] )
+            dbm.save()
 
 
         if options.fetchmaster:
@@ -271,6 +370,24 @@ def onenetctrl(cwd):
             print "clientdisplay ; return:",status
             check4exit(status)
 
+        if options.memdump :
+            status = c.cmd_memdump()
+            if status : status = c.display()
+            print "clientmemdumpdisplay ; return:",status
+            if status:
+                clientfile = open('client.pkl', 'wb')
+                pickle.dump(c._mem,clientfile)
+                clientfile.close()
+            check4exit(status)
+
+        if options.memload :
+            clientfile = open('client.pkl', 'rb')
+            c._mem=pickle.load(clientfile)
+            clientfile.close()
+            status = c.cmd_memload()
+            print "memload ; return:",status
+            check4exit(status)
+
         if options.erase :
             status = c.display()
             print "CMD display ; return:",status
@@ -282,15 +399,6 @@ def onenetctrl(cwd):
                 status=c.cmd_erase()
                 print "cmd erase ; return:",status
                 check4exit(status)
-
-        if options.memload :
-            clientfile = open('client.pkl', 'rb')
-            c._mem=pickle.load(clientfile)
-            clientfile.close()
-            status = c.cmd_memload()
-            print "memload ; return:",status
-            check4exit(status)
-
 
         if options.setni :
             if options.did :
@@ -307,6 +415,12 @@ def onenetctrl(cwd):
 
             status=c.cmd_user_pin(options.pinnumber,options.pinstate)
             print "cmd pinnumber ; return:",status
+            check4exit(status)
+
+
+        if options.save :
+            status=c.cmd_save()
+            print "cmd save ; return:",status
             check4exit(status)
 
         if options.setni :
@@ -430,88 +544,36 @@ def onenetctrl(cwd):
                 if options.did:
                     DBclient.objects.filter(did=c.ana["did"]).delete()
 
-    if options.client :
-        print "now working on CLIENT"
-
-        if options.save :
-            status=c.cmd_save()
-            print "cmd save ; return:",status
-            check4exit(status)
-
-        if options.memdump :
-            status = c.cmd_memdump()
-            if status : status = c.display()
-            print "clientmemdumpdisplay ; return:",status
-            if status:
-                clientfile = open('client.pkl', 'wb')
-                pickle.dump(c._mem,clientfile)
-                clientfile.close()
-            check4exit(status)
-
-    if      options.master :
-        print "now working on MASTER"
-
-        if options.save :
-            status=m.cmd_save()
-            print "cmd save ; return:",status
-            check4exit(status)
-
-        if options.memdump :
-            status = m.cmd_memdump()
-            if status : status = m.display()
-            print "master memdumpdisplay ; return:",status
-            if status:
-                masterfile = open('master.pkl', 'wb')
-                pickle.dump(m._mem,masterfile)
-                masterfile.close()
-            check4exit(status)
-                
-        if options.insertmaster:
-
-            m.cmd_memdump()
-            try:
-                dbm=DBmaster.objects.get(nid=m.ana["nid"])
-            except ObjectDoesNotExist :
-
-                print "non esiste",m.ana["nid"]
-
-                dbm=DBmaster(nid=m.ana["nid"])
-            dbm.device=options.masterdevice
-            dbm.region=m.ana["region"]
-            dbm.channel=m.ana["channel"]
-            dbm.invite=m.ana["invitecode"]
-            dbm.memdump_master_param  = m._mem["master_param"]
-            dbm.memdump_client_list   = m._mem["client_list"]
-            dbm.memdump_base_param    = m._mem["base_param"]
-            dbm.memdump_peer          = m._mem["peer"]
-
-            dbm.save()
-
 
     if not options.single and not options.receive and options.insert:
 
         if ((not options.master) or (not options.client)):
             raise optparse.OptionValueError("Insert command operate on master and client too ( set --master and --client option)")
 
-        c.cmd_memdump()
+        c.cmd_memdump("Client")
         dbm=DBmaster.objects.get(nid=m.ana["nid"],invite=m.ana["invitecode"])
         try:
             dbc=DBclient.objects.get(master=dbm,did=c.ana["did"])
+            dbc.invite=c.ana["invitecode"]
+            dbc.pin0onoff=c.pins[0]
+            dbc.pin0state=c.pinsstate[0]
+            dbc.pin1onoff=c.pins[1]
+            dbc.pin1state=c.pinsstate[1]
+            dbc.pin2onoff=c.pins[0]
+            dbc.pin2state=c.pinsstate[2]
+            dbc.pin3onoff=c.pins[0]
+            dbc.pin3state=c.pinsstate[3]
+            dbc.memdump_base_param    = c._mem["base_param"]
+            dbc.memdump_peer          = c._mem["peer"]
+
         except ObjectDoesNotExist :
-            dbc=DBclient(master=dbm,did=c.ana["did"],invite=c.ana["invitecode"])
-
-        dbc.invite=c.ana["invitecode"]
-        dbc.pin0onoff=c.pins[0]
-        dbc.pin0state=c.pinsstate[0]
-        dbc.pin1onoff=c.pins[1]
-        dbc.pin1state=c.pinsstate[1]
-        dbc.pin2onoff=c.pins[0]
-        dbc.pin2state=c.pinsstate[2]
-        dbc.pin3onoff=c.pins[0]
-        dbc.pin3state=c.pinsstate[3]
-        dbc.memdump_base_param    = c._mem["base_param"]
-        dbc.memdump_peer          = c._mem["peer"]
-
+            dbc=DBclient(master=dbm,did=c.ana["did"],invite=c.ana["invitecode"],\
+                         pin0onoff=c.pins[0],pin0state=c.pinsstate[0],\
+                         pin1onoff=c.pins[1],pin1state=c.pinsstate[1],\
+                         pin2onoff=c.pins[0],pin2state=c.pinsstate[2],\
+                         pin3onoff=c.pins[0],pin3state=c.pinsstate[3],\
+                         memdump_base_param = c._mem["base_param"],\
+                         memdump_peer       = c._mem["peer"] )
         dbc.save()
 
     if options.single:

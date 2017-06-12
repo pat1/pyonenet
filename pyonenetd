@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# LGPL3. (C) 2011  Paolo Patruno <p.patruno@iperbole.bologna.it>.
+# LGPL3. (C) 2017  Paolo Patruno <p.patruno@iperbole.bologna.it>.
 #
 #                 one-net serial communication daemon
 #
@@ -17,9 +17,19 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import pyonenet.settings
+os.environ['DJANGO_SETTINGS_MODULE'] = 'pyonenet.settings'
+from django.conf import settings
+
+
+import django
+django.setup()
+
+
 from pyonenet.pyonenet_config import *
 from pyonenet import daemon
-from pyonenet import _version_
+from pyonenet import __version__
 import logging,os,sys,errno,signal,logging.handlers
 import subprocess
 import datetime,time
@@ -82,7 +92,7 @@ def main(cwd):
     logging.getLogger('').addHandler(handler)
     logging.getLogger('').setLevel(logging.DEBUG)
 
-    logging.info('Starting up pyonenetd version '+_version_)
+    logging.info('Starting up pyonenetd version '+__version__)
 
     #signal.signal(signal.SIGALRM, signalhandler)
 

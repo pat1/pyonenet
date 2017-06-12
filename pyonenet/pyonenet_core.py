@@ -13,12 +13,14 @@ from oncron.models import Configure
 
 import ocm.master_on
 import ocm.master_ow
+import ocm.master_jsrpc
 import ocm.client_on
 import ocm.client_ow
+import ocm.client_jsrpc
 
 import datetime, decimal
 import threading, optparse
-
+import calendar
 
 def inde(network,did):
     """
@@ -129,7 +131,7 @@ class schedules():
         """
                 
         for event in self.schedule:
-            logging.debug("EVENTSET: schedule %s %s %s", event.eventset.eventset, ' --> '\
+            self.logging.debug("EVENTSET: schedule %s %s %s", event.eventset.eventset, ' --> '\
                               ,event.date.isoformat())
 
             event.ar_scheduledatetime = event.date
@@ -138,7 +140,7 @@ class schedules():
 
 
         for event in self.periodicschedule:
-            logging.debug("EVENTSET: periodic schedule %s %s %s", event.eventset.eventset, ' --> '\
+            self.logging.debug("EVENTSET: periodic schedule %s %s %s", event.eventset.eventset, ' --> '\
                               ,  event.time.isoformat())
 
             timesched_min=self.datesched_min.time()
@@ -175,14 +177,17 @@ class PyonenetThread (threading.Thread):
         elif (dbm.protocol == "oneway") :
             self.master = ocm.master_ow
             self.client = ocm.client_ow
+        elif (dbm.protocol == "jsrpc") :
+            self.master = ocm.master_jsrpc
+            self.client = ocm.client_jsrpc
         else:
-            raise optparse.OptionValueError("protocol is neither onenet or oneway")
+            raise optparse.OptionValueError("protocol is neither onenet or oneway or jsrpc")
 
         # I set now with the current time
         self._now=datetime.datetime.now()
         self._first = True
 
-        logging.info('opening a master: %s' % dbm.__unicode__())
+        self.logging.info('opening a master: %s' % dbm.__unicode__())
 
         self.network=[self.master.Master(device=dbm.device)]
 
@@ -408,7 +413,7 @@ class PyonenetThread (threading.Thread):
 
         #get all the eventset active
         for evs in  Eventset.objects.filter(active__exact=True):
-            logging.debug ("EVENTSET: elaborate %s",str(evs))
+            self.logging.debug ("EVENTSET: elaborate %s",str(evs))
             # get all the schedule (schedule and periodschedule)
             scheds=schedules(evs,self._now,startsched,endsched,self.logging)
             for schedule in scheds.get():
@@ -417,7 +422,7 @@ class PyonenetThread (threading.Thread):
                 if ( schedule.event_done <> None ):
                     # I assume the emission is done if it happen around 1 hours
                     if ( abs(schedule.event_done - schedule.ar_scheduledatetime) < datetime.timedelta(minutes=60)): 
-                        logging.debug (" %s %s schedule already done; ignore it !",schedule.ar_scheduledatetime,schedule.event_done)
+                        self.logging.debug (" %s %s schedule already done; ignore it !",schedule.ar_scheduledatetime,schedule.event_done)
                         continue
 
                 #print evs.pin0onoff,evs.pin1onoff,evs.pin2onoff,evs.pin3onoff
@@ -474,7 +479,7 @@ class PyonenetThread (threading.Thread):
           
               pins=[dbc.pin0onoff,dbc.pin1onoff,dbc.pin2onoff,dbc.pin3onoff]
               pinsstate=[dbc.pin0state,dbc.pin1state,dbc.pin2state,dbc.pin3state]
-              c = client.Client(did=dbc.did,pins=pins,pinsstate=pinsstate)
+              c = self.client.Client(did=dbc.did,pins=pins,pinsstate=pinsstate)
               ind = inde(self.network,dbc.did)
               self.network[ind]=c
 

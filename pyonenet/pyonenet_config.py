@@ -71,7 +71,7 @@ locale.setlocale(locale.LC_ALL, config['pyonenetd']['locale'])
 
 ####
 
-from django.core.management import setup_environ
-import settings
-setup_environ(settings)
+#from django.core.management import setup_environ
+#import settings
+#setup_environ(settings)
 
