@@ -1,0 +1,661 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-03-28 12:45+0200\n"
+"PO-Revision-Date: 2011-03-28 13:01+0200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: build/lib/pyonenet/oncron/models.py:25 pyonenet/oncron/models.py:32
+#, fuzzy
+msgid "Activate Events"
+msgstr "Programmi attivi"
+
+#: build/lib/pyonenet/oncron/models.py:26
+#: build/lib/pyonenet/oncron/models.py:27 pyonenet/oncron/models.py:33
+#: pyonenet/oncron/models.py:34
+#, fuzzy
+msgid "Event start time"
+msgstr "Ora inizio programmazione"
+
+#: build/lib/pyonenet/oncron/models.py:37 pyonenet/oncron/models.py:53
+msgid "Event name"
+msgstr "Nome Evento"
+
+#: build/lib/pyonenet/oncron/models.py:38 pyonenet/oncron/models.py:54
+#: pyonenet/onenet/models.py:125
+#, fuzzy
+msgid "Active"
+msgstr "Attivo"
+
+#: build/lib/pyonenet/oncron/models.py:50
+#: build/lib/pyonenet/oncron/models.py:81 pyonenet/oncron/models.py:76
+#: pyonenet/oncron/models.py:107
+#, fuzzy
+msgid "refer to Eventset:"
+msgstr "riferito alla playlist"
+
+#: build/lib/pyonenet/oncron/models.py:52 pyonenet/oncron/models.py:78
+#, fuzzy
+msgid "Programmed date"
+msgstr "Data programmata"
+
+#: build/lib/pyonenet/oncron/models.py:60
+#: build/lib/pyonenet/oncron/models.py:88 pyonenet/oncron/models.py:86
+#: pyonenet/oncron/models.py:114
+#, fuzzy
+msgid "Event done"
+msgstr "emissione effettuata"
+
+#: build/lib/pyonenet/oncron/models.py:70 pyonenet/oncron/models.py:96
+#, fuzzy
+msgid "Programmed for today?"
+msgstr "Programmato per"
+
+#: build/lib/pyonenet/oncron/models.py:83 pyonenet/oncron/models.py:109
+#, fuzzy
+msgid "Programmed start date"
+msgstr "Ora inizio programmazione"
+
+#: build/lib/pyonenet/oncron/models.py:84 pyonenet/oncron/models.py:110
+#, fuzzy
+msgid "Programmed end date"
+msgstr "Ora fine programmazione"
+
+#: build/lib/pyonenet/oncron/models.py:85 pyonenet/oncron/models.py:111
+#, fuzzy
+msgid "Programmed time"
+msgstr "Ora fine programmazione"
+
+#: build/lib/pyonenet/oncron/models.py:86 pyonenet/oncron/models.py:112
+#, fuzzy
+msgid "Programmed days"
+msgstr "Giorni programmati"
+
+#: build/lib/pyonenet/oncron/models.py:97 pyonenet/oncron/models.py:123
+msgid "Linked Playlist"
+msgstr "Playlist correlata"
+
+#: build/lib/pyonenet/onenet/models.py:66
+msgid "Urgente"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:67
+msgid "Normale"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:68
+msgid "Quando possibile"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:79
+msgid "Reparto"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:86
+msgid "Piano"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:93
+#, fuzzy
+msgid "Camera"
+msgstr "Nome"
+
+#: build/lib/pyonenet/onenet/models.py:101
+#: build/lib/pyonenet/onenet/models.py:123 pyonenet/onenet/models.py:134
+#, fuzzy
+msgid "Nome"
+msgstr "Nome"
+
+#: build/lib/pyonenet/onenet/models.py:102
+msgid "Dispositivo seriale"
+msgstr "Serial port"
+
+#: build/lib/pyonenet/onenet/models.py:103
+msgid "Regione"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:104
+msgid "Canale"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:105
+msgid "Identificativo rete"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:106
+#: build/lib/pyonenet/onenet/models.py:125 pyonenet/onenet/models.py:136
+msgid "Identificativo dispositivo"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:108 pyonenet/onenet/models.py:119
+msgid "memdump master_param"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:109
+#: build/lib/pyonenet/onenet/models.py:127 pyonenet/onenet/models.py:120
+#: pyonenet/onenet/models.py:138
+msgid "memdump base_param"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:110 pyonenet/onenet/models.py:121
+msgid "memdump client_list"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:111
+#: build/lib/pyonenet/onenet/models.py:128 pyonenet/onenet/models.py:122
+#: pyonenet/onenet/models.py:139
+msgid "memdump peer"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:113
+msgid "Libera tutti"
+msgstr "Free all"
+
+#: build/lib/pyonenet/onenet/models.py:114
+#: build/lib/pyonenet/onenet/models.py:130 pyonenet/onenet/models.py:141
+msgid "Attivo"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:124 pyonenet/onenet/models.py:135
+msgid "Identificativo client"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:132 pyonenet/onenet/models.py:143
+msgid "Data ultima transazione"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:133 pyonenet/onenet/models.py:144
+msgid "stato dell'ultima transazione"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:135 pyonenet/onenet/models.py:146
+msgid "Pin 0 state"
+msgstr "Pin 0 stato"
+
+#: build/lib/pyonenet/onenet/models.py:136 pyonenet/oncron/models.py:57
+#: pyonenet/onenet/models.py:147
+msgid "Pin 0 onoff"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:138 pyonenet/onenet/models.py:150
+msgid "Pin 1 state"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:139 pyonenet/oncron/models.py:59
+#: pyonenet/onenet/models.py:151
+msgid "Pin 1 onoff"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:142 pyonenet/onenet/models.py:154
+msgid "Pin 2 state"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:143 pyonenet/oncron/models.py:61
+#: pyonenet/onenet/models.py:155
+msgid "Pin 2 onoff"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:145 pyonenet/onenet/models.py:157
+msgid "Pin 3 state"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:146 pyonenet/oncron/models.py:63
+#: pyonenet/onenet/models.py:158
+msgid "Pin 3 onoff"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:149 pyonenet/onenet/models.py:161
+msgid "Data ultimo comando"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:158 pyonenet/onenet/models.py:170
+msgid "OK"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:160
+msgid "Rotta"
+msgstr "Broken"
+
+#: build/lib/pyonenet/onenet/models.py:162 pyonenet/onenet/models.py:174
+#, fuzzy
+msgid "board status"
+msgstr "stato della scheda"
+
+#: build/lib/pyonenet/onenet/models.py:167 pyonenet/onenet/models.py:179
+#: pyonenet/onenet/models.py:187 pyonenet/onenet/models.py:195
+#: pyonenet/onenet/models.py:203
+msgid "On"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:169 pyonenet/onenet/models.py:181
+#: pyonenet/onenet/models.py:189 pyonenet/onenet/models.py:197
+#: pyonenet/onenet/models.py:205
+msgid "Off"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:171
+msgid "TV status"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:191
+#: build/lib/pyonenet/onenet/models.py:208 pyonenet/onenet/models.py:227
+msgid "Risolto"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:193
+msgid "Data apertura"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:194
+#, fuzzy
+msgid "Priorita"
+msgstr "Priorità"
+
+#: build/lib/pyonenet/onenet/models.py:195
+msgid "Nome Paziente"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:196
+msgid "Descrizione del problema"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:201
+msgid "Inserito oggi?"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:206
+msgid "Aperto"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:217
+msgid "Data ultima azione"
+msgstr ""
+
+#: build/lib/pyonenet/onenet/models.py:218
+msgid "Descrizione ultima azione"
+msgstr ""
+
+#: pyonenet/oncron/models.py:45
+msgid "Description"
+msgstr "Descrizione"
+
+#: pyonenet/onenet/models.py:77
+msgid "Urgent"
+msgstr "Urgente"
+
+#: pyonenet/onenet/models.py:78
+msgid "Normal"
+msgstr "Normale"
+
+#: pyonenet/onenet/models.py:79
+msgid "When possible"
+msgstr "Quando possibile"
+
+#: pyonenet/onenet/models.py:90 templates/onenet/client.html:21
+msgid "Zone"
+msgstr "Zona"
+
+#: pyonenet/onenet/models.py:97 templates/onenet/client.html:21
+msgid "Floor"
+msgstr "Piano"
+
+#: pyonenet/onenet/models.py:104 templates/onenet/client.html:21
+msgid "Room"
+msgstr "Stanza"
+
+#: pyonenet/onenet/models.py:112
+msgid "Name"
+msgstr "Nome"
+
+#: pyonenet/onenet/models.py:113
+msgid "Serial device"
+msgstr "Dispositivo seriale"
+
+#: pyonenet/onenet/models.py:114 templates/onenet/master.html:16
+msgid "Region"
+msgstr "Regione"
+
+#: pyonenet/onenet/models.py:115 templates/onenet/master.html:16
+msgid "Channel"
+msgstr "Canale"
+
+#: pyonenet/onenet/models.py:116 templates/onenet/master.html:16
+msgid "Network ID"
+msgstr ""
+
+#: pyonenet/onenet/models.py:117
+msgid "Device ID"
+msgstr ""
+
+#: pyonenet/onenet/models.py:124
+msgid "Activate all"
+msgstr "Attiva tutti"
+
+#: pyonenet/onenet/models.py:172
+msgid "Broken"
+msgstr "Rotta"
+
+#: pyonenet/onenet/models.py:183
+msgid "Pin0 status"
+msgstr ""
+
+#: pyonenet/onenet/models.py:191
+msgid "Pin1 status"
+msgstr ""
+
+#: pyonenet/onenet/models.py:199
+msgid "Pin2 status"
+msgstr ""
+
+#: pyonenet/onenet/models.py:207
+msgid "Pin3 status"
+msgstr ""
+
+#: pyonenet/onenet/models.py:229
+msgid "Open data"
+msgstr "Data apertura"
+
+#: pyonenet/onenet/models.py:230
+msgid "Priority"
+msgstr "Priorità"
+
+#: pyonenet/onenet/models.py:231
+msgid "User name"
+msgstr "Nome utente"
+
+#: pyonenet/onenet/models.py:232
+msgid "Problem description"
+msgstr "Descrizione problema"
+
+#: pyonenet/onenet/models.py:237
+msgid "Inserted today?"
+msgstr "Inserito oggi?"
+
+#: pyonenet/onenet/models.py:242
+msgid "Open"
+msgstr "Aperto"
+
+#: pyonenet/onenet/models.py:244
+msgid "Solved"
+msgstr "Risolto"
+
+#: pyonenet/onenet/models.py:253 pyonenet/onenet/models.py:254
+msgid "Last action description"
+msgstr "Descrizione ultima azione"
+
+#: templates/base.html:35
+msgid "Home"
+msgstr ""
+
+#: templates/base.html:36
+msgid "Admin"
+msgstr "Amministra"
+
+#: templates/admin/base_site.html:4
+msgid "Django site admin"
+msgstr "Amministrazione"
+
+#: templates/onenet/client.html:9 templates/onenet/master.html:9
+msgid "Automatic update every"
+msgstr "Aggiornamento automatico ogni"
+
+#: templates/onenet/client.html:9 templates/onenet/master.html:9
+msgid "minuts"
+msgstr "minuti"
+
+#: templates/onenet/client.html:9 templates/onenet/master.html:9
+msgid "Last update"
+msgstr "Ultimo aggiornamento"
+
+#: templates/onenet/client.html:10 templates/onenet/master.html:10
+msgid "Show All"
+msgstr "Mostra tutti"
+
+#: templates/onenet/client.html:11 templates/onenet/master.html:11
+msgid "Display status"
+msgstr ""
+
+#: templates/onenet/client.html:16
+msgid "Client"
+msgstr ""
+
+#: templates/onenet/client.html:16
+msgid "DID"
+msgstr ""
+
+#: templates/onenet/client.html:16
+msgid "Invite Code"
+msgstr ""
+
+#: templates/onenet/client.html:16
+msgid "Status"
+msgstr ""
+
+#: templates/onenet/client.html:17
+msgid "Pin 0"
+msgstr ""
+
+#: templates/onenet/client.html:18
+msgid "Pin 1"
+msgstr ""
+
+#: templates/onenet/client.html:19
+msgid "Pin 2"
+msgstr ""
+
+#: templates/onenet/client.html:20
+msgid "Pin 3"
+msgstr ""
+
+#~ #: templates/onenet/client.html:91
+#~ #, fuzzy
+#~ msgid "No clients (TV) are available"
+#~ msgstr "Nessuna programmazione disponibile"
+
+#: templates/onenet/client.html:103
+msgid "in"
+msgstr "tra"
+
+#: templates/onenet/client.html:103 templates/onenet/client.html.py:104
+msgid "ago"
+msgstr "fa"
+
+#: templates/onenet/master.html:16
+msgid "Device"
+msgstr ""
+
+#: templates/onenet/master.html:16
+msgid "free"
+msgstr "libera"
+
+#: templates/onenet/master.html:38
+msgid "No master (network) are available"
+msgstr "Nessun master (network) disponibile"
+
+#~ msgid "Code"
+#~ msgstr "Codice"
+
+#~ msgid "Programmed start time"
+#~ msgstr "Ora inizio programmazione"
+
+#~ msgid "Programmed end time"
+#~ msgstr "Ora fine programmazione"
+
+#~ msgid "Activate Jingle"
+#~ msgstr "Jingle attivi"
+
+#~ msgid "Frequency"
+#~ msgstr "Frequenza"
+
+#~ msgid "File"
+#~ msgstr "File"
+
+#, fuzzy
+#~ msgid "Recording date"
+#~ msgstr "Registrato oggi?"
+
+#~ msgid "Emission starting date"
+#~ msgstr "Data inizio emissione"
+
+#, fuzzy
+#~ msgid "Emission end date"
+#~ msgstr "emissione effettuata"
+
+#, fuzzy
+#~ msgid "Emission end time"
+#~ msgstr "emissione effettuata"
+
+#, fuzzy
+#~ msgid "Scheduled days"
+#~ msgstr "Programmato per oggi?"
+
+#~ msgid "Recorded today?"
+#~ msgstr "Registrato oggi?"
+
+#, fuzzy
+#~ msgid "Activate palimpsest"
+#~ msgstr "Playlist attive"
+
+#~ msgid "Type"
+#~ msgstr "Tipo"
+
+#, fuzzy
+#~ msgid "SubType"
+#~ msgstr "Tipo"
+
+#~ msgid "autoproduction"
+#~ msgstr "autoproduzione"
+
+#~ msgid "eteroproduction"
+#~ msgstr "eteroproduzione"
+
+#, fuzzy
+#~ msgid "Time length (seconds)"
+#~ msgstr "Durata massima (secondi)"
+
+#, fuzzy
+#~ msgid "Program Type"
+#~ msgstr "Nome del programma"
+
+#~ msgid "Production"
+#~ msgstr "Produttore"
+
+#, fuzzy
+#~ msgid "refer to program:"
+#~ msgstr "riferito alla playlist"
+
+#~ msgid "Playlist name"
+#~ msgstr "Nome Playlist"
+
+#~ msgid "Generation date"
+#~ msgstr "Data generazione"
+
+#~ msgid "Shuffle Playlist on start"
+#~ msgstr "Disordina la playlist alla partenza"
+
+#~ msgid "Max time length (seconds)"
+#~ msgstr "Durata massima (secondi)"
+
+#, fuzzy
+#~ msgid "Emission done"
+#~ msgstr "Emissione effettuata"
+
+#~ msgid "Active programs"
+#~ msgstr "Programmi attivi"
+
+#, fuzzy
+#~ msgid "Linked program:"
+#~ msgstr "Programma correlato"
+
+#, fuzzy
+#~ msgid "programmed date"
+#~ msgstr "data programmata"
+
+#, fuzzy
+#~ msgid "Scheduled for today?"
+#~ msgstr "Programmato per oggi?"
+
+#, fuzzy
+#~ msgid "Spot Name"
+#~ msgstr "Nome Spot"
+
+#, fuzzy
+#~ msgid "Recordinf date"
+#~ msgstr "Registrato oggi?"
+
+#~ msgid "Prologue"
+#~ msgstr "Prologo"
+
+#~ msgid "Epilogue"
+#~ msgstr "Epilogo"
+
+#~ msgid "Xmms"
+#~ msgstr "Player"
+
+#, fuzzy
+#~ msgid "Program"
+#~ msgstr "Programma"
+
+#~ msgid "Programmed for"
+#~ msgstr "Programmato per"
+
+#~ msgid "That is"
+#~ msgstr "Ossia"
+
+#~ msgid "Last emission done"
+#~ msgstr "Ultima emissione effettuata"
+
+#~ msgid "Length"
+#~ msgstr "Durata"
+
+#~ msgid "Download"
+#~ msgstr "Scarica"
+
+#~ msgid "seconds"
+#~ msgstr "secondi"
+
+#~ msgid "A detail of one episode of one show"
+#~ msgstr "Dettagli di un episodio del programma"
+
+#~ msgid "Return to episodes"
+#~ msgstr "Torna agli episodi"
+
+#~ msgid "episode screenshot"
+#~ msgstr "Immagine dell'episodio"
+
+#~ msgid "Author"
+#~ msgstr "Autore"
+
+#~ msgid "Subscribe"
+#~ msgstr "Iscrizione"
+
+#~ msgid "Download this episode"
+#~ msgstr "Scarica questo episodio"
+
+#~ msgid "A list of episodes of one show"
+#~ msgstr "Lista degli episodi di un programma"
+
+#~ msgid "Return to shows"
+#~ msgstr "Torna ai programmi"
+
+#~ msgid "Explicit"
+#~ msgstr "Esplicito"
+
+#~ msgid "Category"
+#~ msgstr "Categoria"
+
+#~ msgid "A list of shows"
+#~ msgstr "Lista dei programmi"
+
+#~ msgid "Date of recording"
+#~ msgstr "Data della registrazione"

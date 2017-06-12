@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+
+{% block title %}{{ section.title }}{% endblock %}
+
+{% block content %}
+
+<p>{% trans "Automatic update every" %} 5 {% trans "minuts" %}. {% trans "Last update" %}:  {% now "Y-m-d H:i:s" %}</p>
+<p> <a href=/clients/>{% trans "Show All" %}</a>   </p>
+<p>{% trans "Display status" %}:</p>
+
+{% if client %}
+    <table  cellpadding="8" cellspacing="8" border="1" align="left" valign="middle" bgcolor="#888844" frame="border" rules="all">
+      <tr bgcolor="#F0F0F0">
+      <td><B> {% trans "Client" %} </B></td><td><B> {% trans "Master" %} </B></td><td><B> {% trans "DID" %} </B></td><td><B> {% trans "Invite Code" %} </B></td><td><B> {% trans "Status" %} </B></td>
+<td><B> {% trans "Pin 0" %} </B></td>
+<td><B> {% trans "Pin 1" %} </B></td>
+<td><B> {% trans "Pin 2" %} </B></td>
+<td><B> {% trans "Pin 3" %} </B></td>
+<td><B> {% trans "Floor" %} </B></td><td><B> {% trans "Zone" %} </B></td><td><B> {% trans "Room" %} </B></td>
+      </tr>
+    {% for dbc in client %}
+      <tr>
+        <td 
+	   {%if dbc.active %}
+	     bgcolor="#00FF00" 
+	   {% else %}
+	      bgcolor="#FF0000" 
+	   {% endif %}
+           >  {{ dbc.name  }} </td>
+
+        <td> <a href="/master/{{ dbc.master.id }}/"> {{ dbc.master }} </a></td>
+        <td> {{ dbc.did }} </td>
+        <td> {{ dbc.invite }} </td>
+        <td
+	   {%ifequal dbc.boardstatus "OK" %}
+	     bgcolor="#00FF00" 
+	   {% else %}
+	      bgcolor="#FF0000" 
+	   {% endifequal %}
+	   > {{ dbc.boardstatus }} 
+	</td>
+
+        <td
+	   {%ifequal dbc.onoff0 "On" %}
+	     bgcolor="#00FF00" >
+	   {% else %}
+	      bgcolor="#808000">
+	   {% endifequal %}
+	   {{ dbc.onoff0 }} 
+	</td>
+
+        <td
+	   {%ifequal dbc.onoff1 "On" %}
+	     bgcolor="#00FF00" >
+	   {% else %}
+	      bgcolor="#808000">
+	   {% endifequal %}
+	   {{ dbc.onoff1 }} 
+	</td>
+
+        <td
+	   {%ifequal dbc.onoff2 "On" %}
+	     bgcolor="#00FF00" >
+	   {% else %}
+	      bgcolor="#808000">
+	   {% endifequal %}
+	   {{ dbc.onoff2 }} 
+	</td>
+
+        <td
+	   {%ifequal dbc.onoff3 "On" %}
+	     bgcolor="#00FF00" >
+	   {% else %}
+	      bgcolor="#808000">
+	   {% endifequal %}
+	   {{ dbc.onoff3 }} 
+	</td>
+
+
+        <td> {{ dbc.floor }} </td>
+        <td> {{ dbc.zone }} </td>
+        <td> {{ dbc.room }} </td>
+
+      </tr>
+    {% endfor %}
+    </table>
+
+{% else %}
+    <p>{% trans "No clients (TV) are available" %}.</p>
+{% endif %}
+
+
+{% endblock %}
+
+
+
+
+
+
+	<td {% if future %} bgcolor="#884488" {%else %} bgcolor="#00FF00" {% endif %}> {{  datet|date:"Y-m-d H:i:s" }} </td>
+	<td {% if future %} bgcolor="#884488" {%else %} bgcolor="#00FF00" {% endif %}> {%if datet %} {% if future %} {% trans "in" %} {{ datet|timeuntil }} {% else %} {{ datet|timesince }} {% trans "ago" %} {% endif %}{% endif %}</td>
+	<td> {{ datetdone|timesince }} {%if datetdone %} {% trans "ago" %} {% endif %}</td>
+
+
+
+
+
+

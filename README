@@ -1,0 +1,295 @@
+= PYONENET  =
+
+FEATURES
+--------
+
+Pyonenet is developed on the one-net eval board and the Command-Line
+Specification Version 1.6.2. http://one-net.info/
+
+Pyonenet manage one or more one-net network. You need at last two eval
+board: one master and one client.
+
+Pyonenet can:
+
+* initialize the boards (set Network Id, channel and others)
+* create network (invite and join clients, remove ....)
+* memload and memdump to e from files
+* initialize a Data Base
+* insert boards into DataBase
+* memload and memdump to e from Data Base
+* send single commands to clients
+* listen for events from clients (pins changes)
+* minitor the one-net network from web
+* set pin state of clients from web
+* change the pin state to groups of clients with a time-based job
+  scheduler: it enables users to schedule pins changes periodically at
+  certain times or dates. This is done with a web interface
+* logging system to monitor the daemons
+* users and groups authorization system
+* master board configuration is mantained on the DataBase, so pyonenet
+  is master fault error prone (you can change it without rebuild the
+  network).  A client fault need to connect a new working client to
+  the serial port to reload the config param from DB and save it to
+  the flash memory on board
+* the pins client status is refreshed in configurable time periods to
+  prevent a temporary fault on the clients
+* multilanguage web interface
+
+
+HOW TO Install
+--------------
+you can install from:
+1) binary rpm (fedora 12)
+2) source rpm (fedora)
+3) source
+
+download it from http://www.bfsf.it/wiki/OneNet
+
+
+REQUIRES
+--------
+
+python >= 2.5
+http://www.python.org/
+
+django >= 1.2.3
+http://www.djangoproject.com/
+
+python-configobj
+http://www.voidspace.org.uk/python/configobj.html
+(configobj-4.6.0 is now included with pyonenet distribution)
+
+pyserial
+http://pyserial.sourceforge.net/
+
+one-net eval board with firmware svn version trunk 394 (1.6.2 develop)
+http://one-net.info/
+
+
+Configuration
+-------------
+
+there are some .cfg file where find some options to configure all the
+pyonenet software. Those files are different if you work local or in
+installed way. There are some good default configuration that you can
+use without modification.
+
+
+Tool to manage the boards and the Data Base
+-------------------------------------------
+
+The ONE-NET Command-Line Mode (OCM) is designed to enable ONE-NET
+evaluation boards to perform a variety of actions based on commands
+entered via the serial port.
+Pyonenetctrl can perform a lot of the ONE-NET Command-Line (not all)
+returning an error status.
+
+The standard use is to connect the master board to the firsth serial
+port and one client to the second serial port.
+
+With pyonenetctrl you can perform automated action that you can
+combine into a shell script. You can find example script in the
+pyonenet home directory like master.sh client.sh or test.sh
+
+pyonenetctrl --syncdb initialize the DataBase; there are other options
+to insert master and clients into DB and memdump or memload (dump and
+restore the flash configuration parameters) from it.
+
+
+WORKING WITH DATA BASE AND WEB INTERFACE
+----------------------------------------
+
+You can start pyonenetweb to activate the web interface and use a
+browser to manage and monitor the one-net network.
+
+The pyonenetd daemon take in sync the data base and the real boards
+and start the one-net cron timed jobs
+
+
+HOW TO RUN
+----------
+
+>>>>> Easy way:
+
+You can run daemon and web server from your root software
+distributed directory:
+
+python setup.py build
+
+change your preferred language and other preference in pyonenet.cfg 
+
+./pyonenetctrl --syncdb
+You have to answer to some question to setup database.
+
+./pyonenetweb run
+This start pyonenet webserver on port 8080
+
+control+c to stop it
+if all works well you can detach it with
+./pyonenetweb restart
+
+now for a standard session you have to connect the master board to the
+firsth serial port and one client to the second serial port.
+
+to initialize the bosrds execute:
+./master.sh
+./client.sh
+
+to create one network execute:
+./makenetwork.sh
+
+to add more clients you can change the client board connected to the
+second serial port and rerun the client.sh and makenetwork.sh script.
+
+
+disconnect the client board from serial port; it have to work wireless !
+
+./pyonenetd run
+This start daemon onenetvd and communicate with the master board
+
+control+c to stop it
+if all works well you can detach it with
+./pyonenetd restart
+
+
+You have to use a browser (on the same machine) pointing to localhost:8080
+
+to find the serial port available on Linux type:
+python ocm/scanlinux.py
+
+and to communicate with the serial port (the board connected to it) type:
+python ocm/miniterm.py
+
+>>>>> Installed way:
+
+you need access to root administrator user and after:
+
+python setup.py install
+
+choose a normal user to run the daemons, create it and 
+make and go in your preferred user working writable directory
+
+modify /etc/pyonenet/pyonenet-site.cfg or from the normal user
+copy it in your working directory with name pyonenet.cfg and modify it
+specify your personal settings for installed files
+if you want you can set user's global settings coping configuration file in
+~/.pyonenet.cfg
+
+after from root:
+
+pyonenetctrl --syncdb --changeuser
+pyonenetweb restart
+
+You can run pyonenetd in one host and pyonenetweb
+in other if you use client server DB like mysql and specify where
+pyonenetd is running in .cfg files.
+
+on machine where you want run pyonenetd (the player side) after pyonenet installation from root user (set password and activate interactive login):
+passwd pyonenet
+usermod -s /bin/bash pyonenet
+
+login in pyonenet user session and:
+pyonenetd run
+or
+pyonenetd restart
+
+For a pubblic web server do not use django internal web server:
+
+pyonenetweb stop
+
+but use apache instead:
+http://docs.djangoproject.com/en/dev/howto/deployment/modpython/#howto-deployment-modpython
+you can find an example configuration file in doc directory:
+doc/apache_mod_python_example.conf
+
+set
+SERVE_STATIC=False
+in /etc/pyonenet-site.cfg
+
+
+to find the serial port available on Linux type:
+python `python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"`/ocm/scanlinux.py
+
+and to communicate with the serial port (the board connected to it) type:
+python `python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"`/ocm/miniterm.py
+
+
+
+>>>> Pachaged way:
+
+for Fedora and Debian/Ubuntu you have the possibility to install from
+pachages in a easy way.
+
+The pachage create the pyonenet user for you and set everything in a
+standard way for an easy use.
+
+to start everythings from root user (prepend sudo command for Ubuntu):
+pyonenetctrl --syncdb --changeuser
+pyonenetweb restart
+
+You can run pyonenetd in one host and pyonenetweb
+in other if you use client server DB like mysql and specify where
+pyonenetd is running in .cfg files.
+
+on machine where you want run pyonenetd (the player side) after pyonenet installation from root user (set password and activate interactive login):
+passwd pyonenet
+usermod -s /bin/bash pyonenet
+
+login in pyonenet user and:
+pyonenetd run
+or
+pyonenetd restart
+
+If you want you can activate monit daemon to control pyonenet
+daemons; an example conf file to add to monit is in:
+doc/monit_pyonenet_example.conf
+
+For a pubblic web server do not use django internal web server:
+
+pyonenetweb stop
+
+and use apache instead:
+http://docs.djangoproject.com/en/dev/howto/deployment/modpython/#howto-deployment-modpython
+you can find an example configuration file in doc directory:
+doc/apache_mod_python_example.conf
+
+set
+SERVE_STATIC=False
+in /etc/pyonenet-site.cfg
+
+
+to find the serial port available on Linux type:
+python `python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"`/ocm/scanlinux.py
+
+and to communicate with the serial port (the board connected to it) type:
+python `python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"`/ocm/miniterm.py
+
+
+HOW IT WORKS
+------------
+
+in the pyonenet word there are three virtual reality
+1) the hardware (boards and pins status)
+2) the memory object representation
+3) the DataBase (the Django model and physical table representation)
+
+ * pyonenetctrl works on the 1) and some command on 2) and 3)
+ * pyonenetweb enable a browser to work on the 3)
+ * pyonenetd take in sync 1) 2) and 3); when one-net cron have to
+   change some pins status pyonenetd set the new state in the DB and
+   sync the other reality 2) and 1)
+
+The DB reflect the board status; you can change the pins status on the
+clients for the input pins and see the new status on the DB or set the
+output pins on the DB to see the change of the state on the physical
+boards.  You will have some lag from the ststus in 1) and 3) (default
+is +/- 10 seconds)
+
+
+CONTRIBUTED SOFTWARE
+--------------------
+
+module daemon come from http://www.livinglogic.de/Python/index.html
+## Copyright 2007-2009 by LivingLogic AG, Bayreuth/Germany.
+## Copyright 2007-2009 by Walter Dörwald
+## OSI Approved :: MIT License

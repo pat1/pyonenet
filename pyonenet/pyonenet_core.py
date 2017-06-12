@@ -1,0 +1,528 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#  (C) 2011  Paolo Patruno <p.patruno@iperbole.bologna.it>.
+
+from pyonenet_config import *
+from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
+from onenet.models import Master as DBmaster
+from onenet.models import Client as DBclient
+
+from oncron.models import Schedule, PeriodicSchedule, Eventset
+from oncron.models import Configure
+
+import ocm.master_on
+import ocm.master_ow
+import ocm.client_on
+import ocm.client_ow
+
+import datetime, decimal
+import threading, optparse
+
+
+def inde(network,did):
+    """
+    Return the index of a client in a network by id
+    Network is a list of one master and client objects
+    """
+    for c in network:
+        if c.ana["did"] == did : break
+        c = None
+    return network.index(c)
+
+
+def checkclient(name=None):
+    
+    try:
+        dbc=DBclient.objects.get(name=name,active=True,laststatus="SUCCESS")
+        return True,dbc.floor,dbc.zone,dbc.camera
+    except:
+        return False,None,None,None
+
+def checkmaster(name=None):
+    
+    try:
+        dbm=DBmaster.objects.get(name=name,active=True)
+        if dbm.saldo >= dbm.fido:
+            return False
+        return True
+    except:
+        return False
+
+def checktv(tv=None):
+    
+    try:
+        dbc = DBclient.objects.get(name=tv,active=True,laststatus="SUCCESS")
+        return checkmaster(name=dbc.master.name),dbc.floor,dbc.zone,dbc.camera
+    except:
+        return False,None,None,None
+
+
+class schedules():
+    """
+    retrive all the schedules for one master
+    """
+
+    def __init__(self,evs,now,datesched_min,datesched_max,logging):
+        self.logging=logging
+        self.evs=evs
+        self.schedule=()
+        self.periodicschedule=()
+        self.datesched_min=datesched_min
+        self.datesched_max=datesched_max
+
+        now_date=now.date()
+        oggi=calendar.day_name[now.weekday()]
+        ora=now.time()
+
+        timesched_min=self.datesched_min.time()
+        timesched_max=self.datesched_max.time()
+
+        logging.debug( "EVENTSET: elaborate from date %s to %s",self.datesched_min, self.datesched_max)
+        logging.debug( "EVENTSET: elaborate from time %s to %s",timesched_min, timesched_max)
+
+        if (Configure.objects.filter(active__exact=False).count() == 1):
+            return False
+        #todo: the use of ora here is not exact
+        if (Configure.objects.filter(event_starttime__gt=ora).count() == 1) :
+            return False
+        if (Configure.objects.filter(event_endtime__lt=ora).count() == 1):
+            return False
+
+        # retrive the right records relative to schedule
+        self.schedule=Schedule.objects\
+            .filter(eventset__exact=evs)\
+            .filter(date__gte=self.datesched_min)\
+            .filter(date__lte=self.datesched_max)\
+            .filter(eventset__active__exact=True)\
+            .order_by('date')
+
+        # retrive the right records relative to periodicschedule
+        if (timesched_min < timesched_max):
+            self.periodicschedule=PeriodicSchedule.objects\
+                .filter(eventset__exact=evs)\
+                .filter(Q(start_date__lte=now_date) | Q(start_date__isnull=True))\
+                .filter(Q(end_date__gte=now_date)   | Q(end_date__isnull=True))\
+                .filter(time__gte=timesched_min)\
+                .filter(time__lte=timesched_max)\
+                .filter(giorni__name__exact=oggi)\
+                .order_by('time')
+
+        else:
+            # warning here we are around midnight
+            logging.debug("PLAYLIST: around midnight")
+
+            domani=calendar.day_name[self.datesched_max.weekday()]
+        
+            self.periodicschedule=PeriodicSchedule.objects\
+                .filter(eventset__exact=evs)\
+                .filter(Q(start_date__lte=now_date) | Q(start_date__isnull=True))\
+                .filter(Q(end_date__gte=now_date)   | Q(end_date__isnull=True))\
+                .filter(Q(time__gte=timesched_min) & Q(giorni__name__exact=oggi) |\
+                        Q(time__lte=timesched_max) & Q(giorni__name__exact=domani))\
+                .order_by('time')
+
+
+    def get(self):
+        """
+        iterable to get playlist
+        """
+                
+        for event in self.schedule:
+            logging.debug("EVENTSET: schedule %s %s %s", event.eventset.eventset, ' --> '\
+                              ,event.date.isoformat())
+
+            event.ar_scheduledatetime = event.date
+
+            yield event
+
+
+        for event in self.periodicschedule:
+            logging.debug("EVENTSET: periodic schedule %s %s %s", event.eventset.eventset, ' --> '\
+                              ,  event.time.isoformat())
+
+            timesched_min=self.datesched_min.time()
+            timesched_max=self.datesched_max.time()
+
+            if (timesched_min < timesched_max):
+
+                event.ar_scheduledatetime=datetime.datetime.combine(self.datesched_min, event.time)
+                
+            else:
+                # we are around midnight we have to check the correct date (today, tomorrow)
+                if self.ar_scheduledatetime.time() > time(12):
+                    event.ar_scheduledatetime=datetime.combine(self.datesched_min.date(), event.time)
+                else:
+                    event.ar_scheduledatetime=datetime.combine(self.datesched_max.date(), event.time)
+
+            yield event
+
+
+
+class PyonenetThread (threading.Thread):
+    """Thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition."""
+
+    def __init__ (self,dbm,logging):
+        super(PyonenetThread, self).__init__(name=dbm.name)
+        self._stop = threading.Event()
+        self.logging=logging
+        self.dbm=dbm
+
+        if (dbm.protocol == "onenet") :
+            self.master = ocm.master_on
+            self.client = ocm.client_on
+        elif (dbm.protocol == "oneway") :
+            self.master = ocm.master_ow
+            self.client = ocm.client_ow
+        else:
+            raise optparse.OptionValueError("protocol is neither onenet or oneway")
+
+        # I set now with the current time
+        self._now=datetime.datetime.now()
+        self._first = True
+
+        logging.info('opening a master: %s' % dbm.__unicode__())
+
+        self.network=[self.master.Master(device=dbm.device)]
+
+        self.network[0]._mem["master_param"] = self.dbm.memdump_master_param  
+        self.network[0]._mem["client_list"]  = self.dbm.memdump_client_list   
+        self.network[0]._mem["base_param"]   = self.dbm.memdump_base_param    
+        self.network[0]._mem["peer"]         = self.dbm.memdump_peer          
+
+        status=self.network[0].cmd_memload()
+        if not status:
+            self.logging.error('memload command')
+
+        for dbc in DBclient.objects.filter(master__exact=self.dbm):
+
+              pins=[dbc.pin0onoff,dbc.pin1onoff,dbc.pin2onoff,dbc.pin3onoff]
+              pinsstate=[dbc.pin0state,dbc.pin1state,dbc.pin2state,dbc.pin3state]
+              c = self.client.Client(did=dbc.did,pins=pins,pinsstate=pinsstate)
+              self.network.append(c)
+              
+
+    def stop (self):
+        self._stop.set()
+
+    def continua (self):
+        return not self._stop.isSet()
+
+
+    def refresh(self):
+          """
+          refresh the client status taking it fron DB
+          """
+
+          now=datetime.datetime.now()
+
+          # when needed we refresh all ( no more than transactionrefresh/2)
+          for dbc in  DBclient.objects.filter\
+                  (master__exact=self.dbm,lasttransaction__lt=now-datetime.timedelta(seconds=transactionrefresh),\
+                       active__exact=True).order_by("lasttransaction")[:int(transactionrefresh/2)]:
+              ind=inde(self.network,dbc.did)
+              pinnumber=0
+              for pinonoff,pinstate in zip(self.network[ind].pins,self.network[ind].pinsstate):
+
+                  if not (pinonoff is None) and pinstate == "output" : 
+                      self.logging.info('%s: refresh client %d pin %d to %d' % \
+                                       (self.dbm.name,self.network[ind].ana["did"],pinnumber,pinonoff))
+                      status = self.network[0].cmd_single(self.network[ind],srcunit=0,dstunit=pinnumber,onoff=pinonoff)
+                      status = self.network[0].wait(self.network[ind],self.network,"single",5)
+                      status = self.network[ind].events.events['single']['status'] 
+                      if status != "SUCCESS" :
+                          self.logging.error('%s: client %d response to single %s' % \
+                                                 (self.dbm.name,self.network[ind].ana["did"],status))
+                      dbc.laststatus=status
+                      dbc.lasttransaction = datetime.datetime.now()
+
+                  pinnumber += 1
+
+              self.logging.info('%s: save client transaction status on %s ' % (self.dbm.name,dbc.__unicode__()))
+              dbc.save()
+
+    def update(self):
+          """
+          update the client status if it is different from DB
+          """
+
+          for dbc in  DBclient.objects.filter(master__exact=self.dbm,active__exact=True):
+              ind=inde(self.network,dbc.did)
+              update = False
+
+              if dbc.active:
+                  if (not (dbc.pin0onoff is None)) and dbc.pin0state == "output" : 
+                      self.logging.debug('pin0:%d,%d'% (self.network[ind].pins[0], dbc.pin0onoff))
+                      if  self.network[ind].pins[0] != dbc.pin0onoff:
+                          self.network[ind].pins[0] = dbc.pin0onoff
+                          self.network[ind].pinsstate[0] = dbc.pin0state
+                          update=True
+
+                  if (not (dbc.pin1onoff is None)) and dbc.pin1state == "output" : 
+                      self.logging.debug('pin1:%d,%d'% (self.network[ind].pins[1], dbc.pin1onoff))
+                      if  self.network[ind].pins[1] != dbc.pin1onoff:
+                          self.network[ind].pins[1] = dbc.pin1onoff
+                          self.network[ind].pinsstate[1] = dbc.pin1state
+                          update=True
+
+                  if (not (dbc.pin2onoff is None)) and dbc.pin2state == "output" : 
+                      self.logging.debug('pin2:%d,%d'% (self.network[ind].pins[2], dbc.pin2onoff))
+                      if  self.network[ind].pins[2] != dbc.pin2onoff:
+                          self.network[ind].pins[2] = dbc.pin2onoff
+                          self.network[ind].pinsstate[2] = dbc.pin2state
+                          update=True
+
+                  if (not (dbc.pin3onoff is None)) and dbc.pin3state == "output" : 
+                      self.logging.debug('pin3:%d,%d'% (self.network[ind].pins[3], dbc.pin3onoff))
+                      if  self.network[ind].pins[3] != dbc.pin3onoff:
+                          self.network[ind].pins[3] = dbc.pin3onoff
+                          self.network[ind].pinsstate[3] = dbc.pin3state
+                          update=True
+
+              if not update:
+                  self.logging.info('nothing to update')
+
+              # sync the output pins with DB
+              if update:
+                  self.logging.info('update status to some clients')
+                  pinnumber = 0
+                  for pinonoff,pinstate in zip(self.network[ind].pins,self.network[ind].pinsstate):
+                      if not (pinonoff is None) and pinstate == "output" : 
+                          self.logging.info('%s: refresh client %d pin %d to %d' % \
+                                                (self.dbm.name,self.network[ind].ana["did"],pinnumber,pinonoff))
+                          status = self.network[0].cmd_single(self.network[ind],srcunit=0,dstunit=pinnumber,onoff=pinonoff)
+                          status = self.network[0].wait(self.network[ind],self.network,"single",5)
+                          status = self.network[ind].events.events['single']['status'] 
+                          if status != "SUCCESS" :
+                              self.logging.error('%s: client %d response to single %s' % \
+                                                     (self.dbm.name,self.network[ind].ana["did"],status))
+
+                      pinnumber += 1
+
+                  dbc.laststatus=status
+                  dbc.lasttransaction = datetime.datetime.now()
+                  self.logging.info('%s: save client transaction status on %s ' % (self.dbm.name,dbc.__unicode__()))
+                  dbc.save()
+
+
+    def freepins(self):
+        """
+        put pin1 on and pin2 off on ALL clients
+        """
+        now=datetime.datetime.now()
+
+        # put on pins 0, off pin1 on all clients  ( no more than transactionrefresh/2)
+
+        for dbc in  DBclient.objects.filter\
+                (master__exact=self.dbm,lasttransaction__lt=\
+                     now-datetime.timedelta(seconds=transactionrefresh),\
+                     active__exact=True).order_by("lasttransaction")[:int(transactionrefresh/2)]:
+            ind = inde(self.network,dbc.did)
+            #csave=self.network[ind]
+            for pinnumber,pinonoff,pinstate in \
+                    zip((0,1,None,None),(1,0,None,None),self.network[ind].pinsstate):
+
+                if not (pinonoff is None) and pinstate == "output" : 
+                    self.logging.info('%s: free client %d pin %d to %d' % \
+                                          (self.dbm.name,self.network[ind].ana["did"],pinnumber,pinonoff))
+                    status = self.network[0].cmd_single(self.network[ind],srcunit=0,dstunit=pinnumber,onoff=pinonoff)
+                    if status:
+                        status = self.network[0].wait(self.network[ind],self.network,"single",5)
+                        if status:
+                            status = self.network[ind].events.events['single']['status'] 
+                    if status != "SUCCESS" :
+                        self.logging.error('%s: client %d response to single %s' % \
+                                                 (self.dbm.name,self.network[ind].ana["did"],status))
+                    dbc.laststatus=status
+                    dbc.lasttransaction = datetime.datetime.now()
+
+
+            self.logging.info('%s: save client transaction status on %s ' % (self.dbm.name,dbc.__unicode__()))
+
+            ## do not save pins status for free function
+            #self.network[ind].pins[0] = csave.pins[0]
+            #self.network[ind].pins[1] = csave.pins[1]
+
+            dbc.save()
+
+
+
+    def receive(self,rectime=60):
+        """
+        receive from clients and put it in data base
+        """
+
+        status = self.network[0].receive(self.network,rectime) == None
+        for c in self.network[1:]:
+            dbc=DBclient.objects.get(did=c.ana["did"])
+
+            if dbc.active:
+                update=False
+                if not (c.pins[0] is None) and c.pinsstate[0] == "input" : 
+                    if dbc.pin0onoff != c.pins[0]:
+                        dbc.pin0onoff = c.pins[0]
+                        update=True
+                if not (c.pins[1] is None) and c.pinsstate[1] == "input" : 
+                    if dbc.pin1onoff != c.pins[1]:
+                        dbc.pin1onoff = c.pins[1]
+                        update=True
+                if not (c.pins[2] is None) and c.pinsstate[2] == "input" : 
+                    if dbc.pin2onoff != c.pins[2]:
+                        dbc.pin2onoff = c.pins[2]
+                        update=True
+                if not (c.pins[3] is None) and c.pinsstate[3] == "input" : 
+                    if dbc.pin3onoff != c.pins[3]:
+                        dbc.pin3onoff = c.pins[3]
+                        update=True
+
+            if update:
+                self.logging.info('%s: receive: save client input pin status on %s ' % \
+                                      (self.dbm.name,dbc.__unicode__()))
+                self.logging.info('%s: receive %s: %s %s %s %s' % \
+                                      (self.dbm.name,dbc.__unicode__(),\
+                            dbc.pin0onoff,dbc.pin1onoff,dbc.pin2onoff,dbc.pin3onoff))
+                dbc.save()
+
+
+    def cron(self,rectime):
+        """
+        Manage cron events
+        search for events and set pins tha have to change status
+        """
+
+        # I set now with the current time
+        now=datetime.datetime.now()
+
+        #schedule for the nest minsched minutes starting from minsched minuti forward
+        #if it is the first time I start from minsched minuti in the past
+        if (self._first ): 
+            #recovery events not emitted in a ragionable past time range
+            startsched=self._now - datetime.timedelta(minutes=rectime)
+        else:
+            startsched=self._now
+
+        endsched=now
+        self._now=now
+
+
+        #get all the eventset active
+        for evs in  Eventset.objects.filter(active__exact=True):
+            logging.debug ("EVENTSET: elaborate %s",str(evs))
+            # get all the schedule (schedule and periodschedule)
+            scheds=schedules(evs,self._now,startsched,endsched,self.logging)
+            for schedule in scheds.get():
+                #print schedule.ar_scheduledatetime,schedule.ar_emission_done
+
+                if ( schedule.event_done <> None ):
+                    # I assume the emission is done if it happen around 1 hours
+                    if ( abs(schedule.event_done - schedule.ar_scheduledatetime) < datetime.timedelta(minutes=60)): 
+                        logging.debug (" %s %s schedule already done; ignore it !",schedule.ar_scheduledatetime,schedule.event_done)
+                        continue
+
+                #print evs.pin0onoff,evs.pin1onoff,evs.pin2onoff,evs.pin3onoff
+
+                # get clientgroup
+                for clientgroup in evs.clientgroups.all():
+                    # get clients in group
+                    for dbc in clientgroup.clients.all():
+                        #print dbc
+                
+                        update=False
+                        if dbc.pin0state == "output" : 
+                            if dbc.pin0onoff != evs.pin0onoff:
+                                dbc.pin0onoff = evs.pin0onoff
+                                update=True
+                        if dbc.pin1state == "output" : 
+                            if dbc.pin1onoff != evs.pin1onoff:
+                                dbc.pin1onoff = evs.pin1onoff
+                                update=True
+                        if dbc.pin2state == "output" : 
+                            if dbc.pin2onoff != evs.pin2onoff:
+                                dbc.pin2onoff = evs.pin2onoff
+                                update=True
+                        if dbc.pin3state == "output" : 
+                            if dbc.pin3onoff != evs.pin3onoff:
+                                dbc.pin3onoff = evs.pin3onoff
+                                update=True
+
+                        if update:
+                            self.logging.info('%s: cron: save client output pin status on %s ' % \
+                                                  (self.dbm.name,dbc.__unicode__()))
+                            self.logging.info('%s: cron %s: %s %s %s %s' % \
+                                                  (self.dbm.name,dbc.__unicode__(),\
+                                        dbc.pin0onoff,dbc.pin1onoff,dbc.pin2onoff,dbc.pin3onoff))
+                            dbc.save()
+
+                schedule.event_done = datetime.datetime.now()
+                self.logging.info('%s: save schedule status as done %s ' % (self.dbm.name,schedule.__unicode__()))
+                schedule.save()
+
+        self._first = False
+
+
+    def run(self):
+      """
+      network thread
+      """
+
+      try:
+
+          # load every things from DB
+          self.dbm = DBmaster.objects.get(id=self.dbm.id)
+          for dbc in DBclient.objects.filter(master__exact=self.dbm):
+          
+              pins=[dbc.pin0onoff,dbc.pin1onoff,dbc.pin2onoff,dbc.pin3onoff]
+              pinsstate=[dbc.pin0state,dbc.pin1state,dbc.pin2state,dbc.pin3state]
+              c = client.Client(did=dbc.did,pins=pins,pinsstate=pinsstate)
+              ind = inde(self.network,dbc.did)
+              self.network[ind]=c
+
+          while ( self.continua() ):
+              self.dbm = DBmaster.objects.get(id=self.dbm.id)
+
+              if self.dbm.free:
+                  self.freepins()
+              else:
+                  self.refresh()
+                  self.update()
+
+              self.receive(receivetime)
+              self.cron(recover_minutes)
+
+              f = open(timestampfile, "w")
+              f.write(str(datetime.datetime.now()))
+              f.close()
+
+          self.network[0].close()
+ 
+
+      except:
+          import traceback
+          msg = traceback.format_exc()
+          self.logging.error(msg)
+          self.logging.info('thread failed')
+
+
+
+def main():
+
+    handler = logging.handlers.RotatingFileHandler("tmp.log", maxBytes=5000000, backupCount=10)
+    formatter=logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    handler.setFormatter(formatter)
+
+    # Add the log message handler to the root logger
+    logging.getLogger('').addHandler(handler)
+    logging.getLogger('').setLevel(logging.DEBUG)
+
+    logging.info('Starting up pyonenet_core ')
+
+    for dbm in DBmaster.objects.filter(active__exact=True):
+        tr=PyonenetThread(dbm,logging)
+        tr.cron()
+
+        
+if __name__ == '__main__':
+    main()  # (this code was run as script)
+    

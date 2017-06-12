@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="../">Home</a> &rsaquo; Documentation</div>{% endblock %}
+{% block title %}Documentation{% endblock %}
+
+{% block content %}
+
+<h1 id="pyonenet-1">PyOneNet</h1>
+
+<p>
+Pyonenet is developed on the one-net eval board and the Command-Line
+Specification Version 1.6.2. http://one-net.info/
+</p>
+<p>
+Pyonenet manage one or more one-net network. You need at last two eval
+board: one master and one client.
+</p>
+<p>
+Pyonenet can:
+
+<ul>
+
+<li> initialize the boards (set Network Id, channel and others)</li>
+<li> create network (invite and join clients, remove ....)</li>
+<li> memload and memdump to e from files</li>
+<li> initialize a Data Base</li>
+<li> insert boards into DataBase</li>
+<li> memload and memdump to e from Data Base</li>
+<li> send single commands to clients</li>
+<li> listen for events from clients (pins changes)</li>
+<li> minitor the one-net network from web</li>
+<li> set pin state of clients from web</li>
+<li> change the pin state to groups of clients with a time-based job
+  scheduler: it enables users to schedule pins changes periodically at
+  certain times or dates. This is done with a web interface</li>
+<li> logging system to monitor the daemons</li>
+<li> users and groups authorization system</li>
+<li> master board configuration is mantained on the DataBase, so pyonenet
+  is master fault error prone (you can change it without rebuild the
+  network).  A client fault need to connect a new working client to
+  the serial port to reload the config param from DB and save it to
+  the flash memory on board</li>
+<li> the pins client status is refreshed in configurable time periods to
+  prevent a temporary fault on the clients </li>
+<li> multilanguage web interface </li>
+
+</ul>
+</p>
+
+{% endblock %}

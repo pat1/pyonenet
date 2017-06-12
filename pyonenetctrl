@@ -1,0 +1,634 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# LGPL3. (C) 2010  Paolo Patruno <p.patruno@iperbole.bologna.it>.
+#
+#                 one-net serial communication module
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Lesser General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+def check4exit(status):
+    if not status:
+        sys.exit(1)
+
+
+try:
+    from django.core import management
+    from django.core.management import setup_environ
+    from django.core.exceptions import ObjectDoesNotExist
+    dj=True
+except:
+    print "Django is missing: working without DataBase"
+    dj=False
+
+import sys, os, traceback, optparse, pickle
+import pyonenet.pyonenet_config, pyonenet.daemon
+from pyonenet import  _version_
+
+import ocm.master_on
+import ocm.master_ow
+import ocm.client_on
+import ocm.client_ow
+
+from pyonenet.onenet.models import Master as DBmaster 
+from pyonenet.onenet.models import Client as DBclient
+
+
+def onenetctrl(cwd):
+
+
+    import platform
+    if platform.system() == "Linux":
+        masterdevice = "/dev/ttyUSB0"
+        clientdevice = "/dev/ttyUSB1"
+    else:
+        masterdevice = "COM1"
+        clientdevice = "COM2"
+
+
+    p = optparse.OptionParser(usage="usage: %prog [options]",version="%prog "+_version_)
+
+    p.add_option("--protocol", action="store", type="string", help=\
+                     "choise the protocol to use ('onenet' or 'oneway'",default="onenet")
+    p.add_option("--join", action="store_true", help=\
+                     "join a client in the master network (default %default)", default=False)
+    p.add_option("--remove", action="store_true", help=\
+                     "remove a client from the master network (default %default)", default=False)
+    p.add_option("--delete", action="store_true", help="delete a joined client from DB", default=False)
+    p.add_option("--cancel_invite", action="store_true", help="cancel a running join operation",\
+                     default=False)
+    p.add_option("--changekey", action="store_true", help=\
+                     "update the encryption key for all Clients in the network", default=False)
+    p.add_option("--nid", action="store", type="string", help=\
+                     "network identification")
+    p.add_option("--pinnumber", action="store", type="int", help=\
+                     "User Pin Number, integer value (1-255)")
+    p.add_option("--pinstate", action="store", type="string", help=\
+                     "Pin State, 'input', 'output', or 'disable'")
+    p.add_option("--pinonoff", action="store", type="int", help=\
+                     "Set Pin on/off, integer value (0-1)")
+    p.add_option("--invitecode", action="store", type="string", help=\
+                     "invite code")
+    p.add_option("--setni", action="store_true", help=\
+                     "initialize the board with NID and invitecode",default=False)
+    p.add_option("--userpin", action="store_true", help=\
+                     "configure individual input/output pins",default=False)
+    p.add_option("--region", action="store", type="string", help=\
+                     "restarts the device as a Master on the given channel",default=None)
+    p.add_option("--channel", action="store", type="int", help="change channel region",default=None)
+    p.add_option("--did", action="store", type="int", help="client did")
+    p.add_option("--single", action="store_true", help=\
+                     "single command to client",default=False)
+    p.add_option("--masterdevice", action="store", type="string", help=\
+                     "master serial device (default %default)", default=masterdevice)
+    p.add_option("--clientdevice", action="store", type="string", help=\
+                     "client serial device (default %default)", default=clientdevice)
+    p.add_option("--display", action="store_true", help="show board status",default=False)
+    p.add_option("--memdump", action="store_true", help="save board status",default=False)
+    p.add_option("--memload", action="store_true", help="restore board status",default=False)
+    p.add_option("--erase", action="store_true", help="erase flash memory on board",default=False)
+    p.add_option("--save", action="store_true", help="save data on flash memory on board",default=False)
+    p.add_option("--master", action="store_true", help="do action on the master board",default=False)
+    p.add_option("--client", action="store_true", help="do action on the client board",default=False)
+    p.add_option("--receive", action="store_true", help="listen for messages",default=False)
+    p.add_option("--receivetime", action="store", type="int", \
+                     help="time to receive messages (default %default) ",default=60)
+
+    if dj:
+        p.add_option("--syncdb", action="store_true", help=\
+                         "initialize Data Base (default %default)", default=False)
+        p.add_option("--changeuser", action="store_true", help=\
+                         "change user to the user in config file (default %default)", default=False)
+        p.add_option("--insertmaster", action="store_true", help="insert a master in DB", default=False)
+        p.add_option("--insert", action="store_true", help="insert a joined client in DB", default=False)
+
+        p.add_option("--fetchmaster", action="store_true", help="load memory on master from DB", default=False)
+        p.add_option("--fetch", action="store_true", help="load memory on client from DB", default=False)
+
+    try:
+        (options, args) = p.parse_args()
+        if not dj:
+            options.insertmaster=False
+            options.insert=False
+            options.syncdb=False
+            options.changeuser=False
+            options.fetchmaster=False
+            options.fetch=False
+
+    except:
+        return False
+
+    if      not options.syncdb and\
+            not options.master and\
+            not options.client :
+
+        p.print_help()
+        raise optparse.OptionValueError("you have to set one of --syncdb --master --client options")
+
+
+    if (options.changeuser):
+        dae=pyonenet.daemon.Daemon()
+        dae.switchuser(user=pyonenet.pyonenet_config.user,group=pyonenet.pyonenet_config.group,env=None)
+        #try:
+        #    os.chdir(cwd)
+        #except:
+        #    pass
+
+    if (options.syncdb):
+        setup_environ(pyonenet.settings)
+        management.call_command("syncdb")
+
+
+    if dj : setup_environ(pyonenet.settings)
+
+    if (options.protocol == "onenet") :
+        master = ocm.master_on
+        client = ocm.client_on
+    elif (options.protocol == "oneway") :
+        master = ocm.master_ow
+        client = ocm.client_ow
+    else:
+        raise optparse.OptionValueError("protocol is neither onenet or onewaay")
+
+    # check channel options
+    if ((options.region is None) <> (options.channel is None)):
+        raise optparse.OptionValueError("you have to set --region and --channel together")
+
+    if not options.master and ( options.changekey or options.region) :
+        raise optparse.OptionValueError("Some requested operation are master specific")
+
+    if options.client and ( options.changekey or options.region) :
+        raise optparse.OptionValueError("Some requested operation are master specific")
+
+    if      options.master :
+        print "now working on MASTER"
+
+        m=master.Master(device=options.masterdevice)
+
+        if options.display :
+            status = m.display()
+            print "display ; return:",status
+            check4exit(status)
+
+        if options.erase :
+            status = m.display()
+            print "CMD display; return:",status
+            check4exit(status)
+            print "CMD erase"
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                print "cmd erase ; return:",m.cmd_erase()
+                check4exit(status)
+
+        if options.memload :
+            masterfile = open('master.pkl', 'rb')
+            m._mem=pickle.load(masterfile)
+            masterfile.close()
+            status = m.cmd_memload()
+            print "memload ; return:",status
+            check4exit(status)
+
+        if options.changekey :
+            status=m.cmd_change_key()
+            print "cmd changekey ; return:",status
+            check4exit(status)
+            status=m.wait(m,(m,),"change_key",60)
+            print "async change key; return:",status
+            check4exit(status)
+
+        if options.cancel_invite :
+            status=m.cmd_cancel_invite()
+            print "cmd cancel invite ; return:",status
+            check4exit(status)
+
+        if options.setni :
+            if options.nid is None <> options.invitecode is None:
+                raise optparse.OptionValueError("for option --setni you have to set --nid and --invitecode")
+
+            status = m.display()
+            print "CMD display; return:",status
+            check4exit(status)
+            print "CMD setni"
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                print "cmd setni ; return:",m.cmd_setni(options.nid,options.invitecode)
+                check4exit(status)
+
+        if options.userpin :
+            if options.pinnumber is None or options.pinstate is None:
+                raise optparse.OptionValueError("for userpin option you have to set --pinnumber and --pinstate")
+            status=m.cmd_user_pin(options.pinnumber,options.pinstate)
+            print "cmd pinnumber ; return:",status
+            check4exit(status)
+
+        if options.region :
+            status = m.display()
+            print "CMD display; return:",status
+            check4exit(status)
+            print "CMD channel"
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                status=m.cmd_channel(options.region,options.channel)
+                print "cmd channel ; return:",status
+                check4exit(status)
+
+
+        if options.fetchmaster:
+
+            dbm=DBmaster.objects.get(nid=m.ana["nid"],invite=m.ana["invitecode"])
+
+            m._mem["master_param"] = dbm.memdump_master_param
+            m._mem["client_list"]  = dbm.memdump_client_list
+            m._mem["base_param"]   = dbm.memdump_base_param
+            m._mem["peer"]         = dbm.memdump_peer
+            
+            status = m.cmd_memload()
+            print "fetchmaster ; return:",status
+            check4exit(status)
+
+
+    if options.client :
+        print "now working on CLIENT"
+
+        if options.did :
+        #if options.did  or options.invitecode:   # should be like this but setni do not work and client board have to not already joined
+            c=client.Client(did=options.did,invitecode=options.invitecode)
+        else:
+            c=client.Client(device=options.clientdevice,did=options.did,invitecode=options.invitecode)
+
+        if options.display :
+            status = c.display()
+            print "clientdisplay ; return:",status
+            check4exit(status)
+
+        if options.erase :
+            status = c.display()
+            print "CMD display ; return:",status
+            check4exit(status)
+
+            print "CMD erase"
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                status=c.cmd_erase()
+                print "cmd erase ; return:",status
+                check4exit(status)
+
+        if options.memload :
+            clientfile = open('client.pkl', 'rb')
+            c._mem=pickle.load(clientfile)
+            clientfile.close()
+            status = c.cmd_memload()
+            print "memload ; return:",status
+            check4exit(status)
+
+
+        if options.setni :
+            if options.did :
+                raise optparse.OptionValueError("you cannot setni on client not connected to serial line: do not specify --did and --invitecode")
+            if options.nid is None or options.invitecode is None:
+                raise optparse.OptionValueError("you have to set nid and invitecode")
+
+
+        if options.userpin :
+            if options.pinnumber is None or options.pinstate is None:
+                raise optparse.OptionValueError("for userpin option you have to set --pinnumber and --pinstate")
+            if options.did :
+                raise optparse.OptionValueError("you cannot userpin on client not connected to serial line: do not specify --did and --invitecode")
+
+            status=c.cmd_user_pin(options.pinnumber,options.pinstate)
+            print "cmd pinnumber ; return:",status
+            check4exit(status)
+
+        if options.setni :
+            status = c.display()
+            print "CMD display ; return:",status
+            check4exit(status)
+
+            print "CMD setni"
+            confirm = raw_input("YOU ARE GOING TO CANCEL ANY DATA ON THIS DEVICE; ARE YOU SURE ? (y/N)").upper()
+            if confirm == "Y" :
+                status=c.cmd_setni(options.nid,options.invitecode)
+                print "cmd setni ; return:",status
+                check4exit(status)
+
+    if options.join:
+
+        if ((not options.master) or (not options.client)):
+            raise optparse.OptionValueError("Join command operate on master and client too ( set --master and --client option)")
+
+        if m.ana["channel"] is None :
+            raise Error("channel is not set on Master: cannot invite")
+                
+        # check channel options
+        if ((options.region is None) or (options.channel is None)):
+            region=m.ana["region"]
+            chan=int(m.ana["channel"])
+        else:
+            region=options.region
+            chan=int(options.channel)
+
+        jointimeout=55
+        if not (options.did  or options.invitecode):
+            print "client; cmd join %d:%s:%d ; return:"%(jointimeout,region,chan), c.cmd_join(jointimeout,region,chan)
+        status=m.cmd_invite(c)
+        print "master; cmd invite; return:",status
+        check4exit(status)
+
+        m.wait(m,(m,),"invite",60)
+        ret =   m.events.events['invite']['status'] == "SUCCESS"
+        print "master; async invite; return:", ret
+
+        if not (options.did  or options.invitecode):
+            print "climas; async receive; return:",c.receive((m,c),1) == None
+        if ret:
+            print "client; joined with did   :",c.ana["did"]
+        else:
+            print "client; not joined"
+            status=m.cmd_cancel_invite()
+            print "cmd cancel invite ; return:",status
+            check4exit(status)
+
+        check4exit(ret)
+
+        if options.save :
+            print "master; cmd save; return:",m.cmd_save()
+            if not (options.did  or options.invitecode):
+                status=c.cmd_save()
+                print "client; cmd save; return:",status
+                check4exit(status)
+
+
+    if options.fetch:
+
+        if ((not options.master) or (not options.client)):
+            raise optparse.OptionValueError("fetch command operate on master and client too ( set --master and --client option)")
+        
+        dbm=DBmaster.objects.get(nid=m.ana["nid"],invite=m.ana["invitecode"])
+        dbc=DBclient.objects.get(master=dbm,did=c.ana["did"])
+
+        c=client.Client(device=options.clientdevice,did=options.did,invitecode=options.invitecode)
+
+        c._mem["base_param"]   = dbc.memdump_base_param
+        c._mem["peer"]         = dbc.memdump_peer
+
+        print c._mem
+            
+        status = c.cmd_memload("Client")
+        print "fetch ; return:",status
+        check4exit(status)
+
+
+
+    if ((options.delete) and (not options.remove)):
+        raise optparse.OptionValueError("delete a client from db is possible only with --remove option")
+
+    if options.remove:
+
+        if ((not options.master) or (not options.client)):
+            raise optparse.OptionValueError("Remove command operate on master and client too ( set --master and --client option)")
+
+        status= m.cmd_remove_device(c)
+        print "master; cmd remove_device; return:",status
+        check4exit(status)
+
+        # da verificare se necessarie queste righe
+        #
+        #m.wait(m,(m,),"remove device",60)
+        #ret =   m.events.events['remove device']['status'] == "SUCCESS"
+        #print "master; async remove; return:",ret
+        #if not (options.did  or options.invitecode):
+        #    status=c.receive((m,c),1) == None
+        #    print "climas; async receive;      return:",status
+        #    check4exit(status)
+        #check4exit(ret)
+
+        status=m.cmd_save()
+        print "master; cmd save; return:",status
+        check4exit(status)
+
+        if not (options.did  or options.invitecode):
+            status=c.cmd_save()
+            print "client; cmd save; return:",status
+            check4exit(status)
+
+        if options.delete and ret:
+            print "rimuovo dal db",c.ana["invitecode"]
+            if options.invitecode:
+                DBclient.objects.filter(invite=c.ana["invitecode"]).delete()
+
+            else:
+                if options.did:
+                    DBclient.objects.filter(did=c.ana["did"]).delete()
+
+    if options.client :
+        print "now working on CLIENT"
+
+        if options.save :
+            status=c.cmd_save()
+            print "cmd save ; return:",status
+            check4exit(status)
+
+        if options.memdump :
+            status = c.cmd_memdump()
+            if status : status = c.display()
+            print "clientmemdumpdisplay ; return:",status
+            if status:
+                clientfile = open('client.pkl', 'wb')
+                pickle.dump(c._mem,clientfile)
+                clientfile.close()
+            check4exit(status)
+
+    if      options.master :
+        print "now working on MASTER"
+
+        if options.save :
+            status=m.cmd_save()
+            print "cmd save ; return:",status
+            check4exit(status)
+
+        if options.memdump :
+            status = m.cmd_memdump()
+            if status : status = m.display()
+            print "master memdumpdisplay ; return:",status
+            if status:
+                masterfile = open('master.pkl', 'wb')
+                pickle.dump(m._mem,masterfile)
+                masterfile.close()
+            check4exit(status)
+                
+        if options.insertmaster:
+
+            m.cmd_memdump()
+            try:
+                dbm=DBmaster.objects.get(nid=m.ana["nid"])
+            except ObjectDoesNotExist :
+
+                print "non esiste",m.ana["nid"]
+
+                dbm=DBmaster(nid=m.ana["nid"])
+            dbm.device=options.masterdevice
+            dbm.region=m.ana["region"]
+            dbm.channel=m.ana["channel"]
+            dbm.invite=m.ana["invitecode"]
+            dbm.memdump_master_param  = m._mem["master_param"]
+            dbm.memdump_client_list   = m._mem["client_list"]
+            dbm.memdump_base_param    = m._mem["base_param"]
+            dbm.memdump_peer          = m._mem["peer"]
+
+            dbm.save()
+
+
+    if not options.single and not options.receive and options.insert:
+
+        if ((not options.master) or (not options.client)):
+            raise optparse.OptionValueError("Insert command operate on master and client too ( set --master and --client option)")
+
+        c.cmd_memdump()
+        dbm=DBmaster.objects.get(nid=m.ana["nid"],invite=m.ana["invitecode"])
+        try:
+            dbc=DBclient.objects.get(master=dbm,did=c.ana["did"])
+        except ObjectDoesNotExist :
+            dbc=DBclient(master=dbm,did=c.ana["did"],invite=c.ana["invitecode"])
+
+        dbc.invite=c.ana["invitecode"]
+        dbc.pin0onoff=c.pins[0]
+        dbc.pin0state=c.pinsstate[0]
+        dbc.pin1onoff=c.pins[1]
+        dbc.pin1state=c.pinsstate[1]
+        dbc.pin2onoff=c.pins[0]
+        dbc.pin2state=c.pinsstate[2]
+        dbc.pin3onoff=c.pins[0]
+        dbc.pin3state=c.pinsstate[3]
+        dbc.memdump_base_param    = c._mem["base_param"]
+        dbc.memdump_peer          = c._mem["peer"]
+
+        dbc.save()
+
+    if options.single:
+        if ((not options.master) or (not options.client)):
+            raise optparse.OptionValueError("--single command operate on master and client too ( set --master and --client option)")
+        if (( options.pinnumber is None) or (options.pinonoff is None)):
+            raise optparse.OptionValueError("--single need --pinnumber and --pinonoff")
+
+        status=m.cmd_single(c,srcunit=0,dstunit=options.pinnumber,onoff=options.pinonoff)
+        print "master; cmd single 0 on ;  torna:",status
+        check4exit(status)
+        status=m.wait(c,(c,),"single",5)
+        print "async single; torna:",status
+        check4exit(status)
+
+        ret =   c.events.events['single']['status'] == "SUCCESS"
+        print "return status:",ret
+        check4exit(ret)
+
+        if ret :
+            print "pins changed:",c.pins
+
+            if options.insert:
+
+                print "with option --single I insert only pinonoff in database"
+
+                dbm=DBmaster.objects.get(nid=m.ana["nid"],invite=m.ana["invitecode"])
+                dbc=DBclient.objects.get(master=dbm,did=c.ana["did"])
+
+                if not (c.pins[0] is None) : 
+                    dbc.pin0onoff=c.pins[0]
+                if not (c.pinsstate[0] is None) : 
+                    dbc.pin0state=c.pinsstate[0]
+                if not (c.pins[1] is None) : 
+                    dbc.pin1onoff=c.pins[1]
+                if not (c.pinsstate[1] is None) : 
+                    dbc.pin1state=c.pinsstate[1]
+                if not (c.pins[2] is None) : 
+                    dbc.pin2onoff=c.pins[2]
+                if not (c.pinsstate[2] is None) : 
+                    dbc.pin2state=c.pinsstate[2]
+                if not (c.pins[3] is None) : 
+                    dbc.pin3onoff=c.pins[3]
+                if not (c.pinsstate[3] is None) : 
+                    dbc.pin3state=c.pinsstate[3]
+
+                dbc.save()
+
+        else:
+            print "Single command failed and status not inserted in data Base"
+
+
+    if options.receive:
+        if ((not options.master) or (not options.client)):
+            raise optparse.OptionValueError\
+                ("--receive command operate on master and client too ( set --master and --client option)")
+
+        ret = m.receive((m,c),options.receivetime) == None
+        print "climas; async receive; return:",ret
+
+        if options.insert :
+            if ret:
+
+                print "with option --receive I insert only pinonoff in database"
+
+                dbm=DBmaster.objects.get(nid=m.ana["nid"],invite=m.ana["invitecode"])
+                dbc=DBclient.objects.get(master=dbm,did=c.ana["did"])
+
+                if not (c.pins[0] is None) : 
+                    dbc.pin0onoff=c.pins[0]
+                if not (c.pinsstate[0] is None) : 
+                    dbc.pin0state=c.pinsstate[0]
+                if not (c.pins[1] is None) : 
+                    dbc.pin1onoff=c.pins[1]
+                if not (c.pinsstate[1] is None) : 
+                    dbc.pin1state=c.pinsstate[1]
+                if not (c.pins[2] is None) : 
+                    dbc.pin2onoff=c.pins[2]
+                if not (c.pinsstate[2] is None) : 
+                    dbc.pin2state=c.pinsstate[2]
+                if not (c.pins[3] is None) : 
+                    dbc.pin3onoff=c.pins[3]
+                if not (c.pinsstate[3] is None) : 
+                    dbc.pin3state=c.pinsstate[3]
+
+                dbc.save()
+
+            else:
+                print "Listencommand failed and status not inserted in data Base"
+
+
+        check4exit(m.display())
+        check4exit(c.display())
+
+
+
+    if options.client:
+        c.close()
+
+    if options.master:
+        m.close()
+
+    return False
+
+if __name__ == '__main__':
+
+
+    try:
+        cwd=os.getcwd()
+        status = onenetctrl(cwd)  # (this code was run as script)
+
+    except:
+        print ""
+        print '-'*60
+        print sys.exc_info()[1]
+        print '-'*60
+        sys.exit(1)
+
+    sys.exit(status)
+

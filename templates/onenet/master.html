@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+
+{% block title %}{{ section.title }}{% endblock %}
+
+{% block content %}
+
+<p>{% trans "Automatic update every" %} 5 {% trans "minuts" %}. {% trans "Last update" %}:  {% now "Y-m-d H:i:s" %}</p>
+<p> <a href=/masters/>{% trans "Show All" %}</a>   </p>
+<p>{% trans "Display status" %}:</p>
+
+{% if master %}
+    <table  cellpadding="8" cellspacing="8" border="1" align="left" valign="middle" bgcolor="#888844" frame="border" rules="all">
+      <tr bgcolor="#F0F0F0">
+      <td><B> {% trans "Master" %} </B></td><td><B> {% trans "Network ID" %} </B></td><td><B> {% trans "Device" %} </B></td><td><B> {% trans "Protocol" %} </B></td><td><B> {% trans "Region" %} </B></td><td><B> {% trans "Channel" %} </B></td><td><B> {% trans "free" %}  </B></td>
+      </tr>
+    {% for dbm in master %}
+      <tr>
+        <td 
+	   {%if dbm.active %}
+	     bgcolor="#00FF00" 
+	   {% else %}
+	      bgcolor="#FF0000" 
+	   {% endif %}
+           > <a href=/client/{{ dbm.id }}/> {{ dbm.name  }} </a> </td>
+
+        <td> {{ dbm.nid }} </td>
+        <td> {{ dbm.device }} </td>
+        <td> {{ dbm.protocol }} </td>
+        <td> {{ dbm.region }} </td>
+        <td> {{ dbm.channel }} </td>
+        <td> {{ dbm.free }} </td>
+      </tr>
+    {% endfor %}
+    </table>
+
+{% else %}
+    <p>{% trans "No master (network) are available" %}.</p>
+{% endif %}
+
+
+{% endblock %}

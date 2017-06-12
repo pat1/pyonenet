@@ -1,0 +1,16 @@
+Source: pyonenet
+Section: sound
+Priority: extra
+Maintainer: Paolo Patruno <p.patruno@iperbole.bologna.it>
+Build-Depends: debhelper (>= 7)
+Build-Depends-Indep: python, python-support, python-setuptools, python-django (>=1.2.3) ,python-django-extensions, python-configobj, gettext
+Standards-Version: 3.8.1
+Homepage: http://pyonenet.sf.net
+
+Package: pyonenet
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, python, python-reportlab (>=2.0) , python-configobj, python-django (>=1.2.3), python-serial, python-gtk2
+Description: automation for TV rent
+ Simple to use, home automation software with web interface
+ .
+ Developed with Python, Django, It use One-Net Evaluation module

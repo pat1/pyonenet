@@ -1,0 +1,21 @@
+include COPYING
+include NEWS
+include README
+include README_windows
+include TODO
+include *.txt
+include *.rules
+include pyonenet.spec
+global-include  *.txt *.py *.sh *.in *.cfg *.json
+include cctalk/COPYING
+include cctalk/COPYING.LESSER
+include ocm/COPYING
+include ocm/COPYING.LESSER
+include totem/COPYING
+include totem/COPYING.LESSER
+recursive-include doc *
+recursive-include images *
+recursive-include locale *.po
+recursive-include templates *
+recursive-include media *
+recursive-include debian *

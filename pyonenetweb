@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+# (C) 2010Paolo Patruno.
+
+from pyonenet import daemon
+from pyonenet import _version_
+from django.core import management
+from django.core.management import setup_environ
+import pyonenet.pyonenet_config
+import pyonenet.pyonenet_core
+
+
+pyonenetweb = daemon.Daemon(
+        stdin="/dev/null",
+        stdout=pyonenet.settings.logfileweb,
+        stderr=pyonenet.settings.errfileweb,
+        pidfile=pyonenet.settings.lockfileweb,
+        user=pyonenet.settings.userweb,
+        group=pyonenet.settings.groupweb
+)
+
+
+#class  mydaemon(daemon):
+#
+#    def optionparser(self):
+#        op = super(miodaemon, self).optionparser()
+#        op.add_option("-s", "--syncdb",action="store_false")
+#        return op 	  				 
+
+
+def main(cwd):
+
+    import os
+    try:
+        os.chdir(cwd)
+    except:
+        pass
+
+    setup_environ(pyonenet.settings)
+    management.call_command("runserver",pyonenet.settings.port,use_reloader=False)
+
+
+if __name__ == '__main__':
+
+    import sys, os
+    cwd=os.getcwd()
+
+    if pyonenetweb.service():
+
+        sys.stdout.write("Pyonenetweb version "+_version_+"\n")
+        sys.stdout.write("Daemon started with pid %d\n" % os.getpid())
+        sys.stdout.write("Daemon stdout output\n")
+        sys.stderr.write("Daemon stderr output\n")
+
+        sys.exit(main(cwd))  # (this code was run as script)

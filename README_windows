@@ -1,0 +1,113 @@
+= PYONENET 1.0 WINDOWS NOTE =
+
+Install python and pyserial
+---------------------------
+download and install python windows installer
+http://www.python.org/
+
+download and install pyserial windows installer
+http://pyserial.sourceforge.net/
+
+look instructions at http://docs.python.org/using/windows.html
+for Setting environment variables and:
+Finding the Python executable
+Finding modules
+
+or try this commands at the command prompt:
+PATH=%PATH%;C:\Python27;.
+set PYTHONPATH=%PYTHONPATH%;.
+
+when at the prompt python command works fine continue with the next step:
+you can install from  ufficial downloads or  from unofficially executable
+installer for MS windows.
+
+
+How To install django and configobj from ufficial downloads
+--------------------------------------
+download django >= 1.2.3
+http://www.djangoproject.com/
+gunzip and untar ( you can use 7zip at http://www.7-zip.org )
+at the dos command prompt cd in the django directory and type
+python setup.py install
+
+download configobj
+http://www.voidspace.org.uk/python/configobj.html
+gunzip and untar ( you can use 7zip at http://www.7-zip.org )
+at the dos command prompt cd in the django directory and type
+python setup.py install
+
+
+How to install django and configobj from unofficially 
+executable installer for MS windows
+--------------------------------------------------------------------
+
+download and run it from: 
+http://www.bfsf.it/wiki/OneNet
+
+
+
+Install pyonenet
+----------------
+
+download IT from:
+http://www.bfsf.it/wiki/OneNet
+
+untar and go to the next step going into the untarred directory
+
+
+How To run pyonenet
+-------------------
+
+To run the pyonenet commands you have to open the DOS command 
+prompt and set the envinronment variables like before
+try this :
+PATH=%PATH%;C:\Python27;.
+set PYTHONPATH=%PYTHONPATH%;.
+
+you have to prepend "python" to every pyonenet commands.
+
+To find the serial port available on windows type:
+python ocm/scanwin32.py
+
+and to communicate with the serial port (the board connected to it) type:
+python ocm/miniterm.py
+
+windows use different config files:
+
+pyonenet.cfg      -> pyonenet_win.cfg
+pyonenet-site.cfg -> pyonenet-site_win.cfg 
+
+if you use default configuration you need C:\TEMP directory
+
+in this release you cannot detach the process from terminal:
+pyonenetd/pyonenetweb start do not work
+
+you have to use:
+python pyonenetd run 
+python pyonenetweb run 
+
+from http://bytes.com/topic/python/answers/736635-daemon-under-windows :
+
+"""
+On Windows, you develop "services". They are under the control of the
+"service control manager", and can be managed through the "services"
+control panel application, and the "net start/stop" command line
+utility.
+
+In that architecture, you don't need fork to start a background
+process, but instead, you register your service with the system, and
+it will get started automatically (if you wish so) or manually
+(through the management interface).
+
+You can use the Win32 extensions to create services, with the
+win32serviceutil module.
+"""
+
+http://support.microsoft.com/kb/137890
+
+http://book.opensourceproject.org.cn/lamp/python/pythonwin/opensource/pythonwin32_snode143.html
+
+
+
+FOR THE OTHER ISTRUCTIONS GO TO THE README FILE !
+-------------------------------------------------

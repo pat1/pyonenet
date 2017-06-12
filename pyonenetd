@@ -1,0 +1,185 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# LGPL3. (C) 2011  Paolo Patruno <p.patruno@iperbole.bologna.it>.
+#
+#                 one-net serial communication daemon
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Lesser General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from pyonenet.pyonenet_config import *
+from pyonenet import daemon
+from pyonenet import _version_
+import logging,os,sys,errno,signal,logging.handlers
+import subprocess
+import datetime,time
+#from threading import *
+import pyonenet.pyonenet_core
+
+from pyonenet.onenet.models import Master as DBmaster 
+
+pyonenetd = daemon.Daemon(
+        stdin="/dev/null",
+        stdout="/dev/null",
+        stderr="/dev/null",
+        pidfile=lockfile,
+        user=user,
+        group=group,
+        env=None
+)
+
+
+
+class Mt:
+
+    def __init__(self,logging):
+        self.logging=logging
+        self.t=[]
+
+    def terminate(self,signal,bho):
+
+        self.logging.info('master thread Manage sigterm' )
+
+        for tm in self.t:
+            tm.stop()
+
+        for tm in self.t:
+            tm.join()
+                  
+        self.logging.info('All threads terminated for sigterm' )
+        self.logging.info('Stopped for sigterm')
+
+        sys.exit(0)
+
+
+def main(cwd):
+
+    try:
+        os.chdir(cwd)
+    except:
+        pass
+
+    #def signalhandler(signum, frame):
+    #    logging.info( 'Signal handler called with signal %d', signum)
+
+    handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=5000000, backupCount=10)
+    formatter=logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    handler.setFormatter(formatter)
+    #handler.setLevel(logging.DEBUG)
+
+    # Add the log message handler to the root logger
+    logging.getLogger('').addHandler(handler)
+    logging.getLogger('').setLevel(logging.DEBUG)
+
+    logging.info('Starting up pyonenetd version '+_version_)
+
+    #signal.signal(signal.SIGALRM, signalhandler)
+
+    f = open(timestampfile, "w")
+    f.write(str(datetime.datetime.now()))
+    f.close()
+
+    #we want to run a single process
+
+    try:
+
+      mt=Mt(logging)
+      for dbm in DBmaster.objects.filter(active__exact=True):
+      
+          #      start thread for each network (master)
+          logging.info('Start new thread: %s' % dbm.name )
+          tt=pyonenet.pyonenet_core.PyonenetThread( dbm,logging)
+          tt.start()
+          mt.t.append(tt)
+
+      signal.signal(signal.SIGTERM, mt.terminate)
+
+
+      # here I monitor thread
+      # if they dead I try to restart e new one for ever
+
+      somealive = True
+      while True:
+          logging.info('poll thread size %d' % len(mt.t))
+          
+          for tm in mt.t:
+              logging.info('whatch dog: checking %s' % (tm.name))
+              alive=tm.isAlive()
+              logging.info('whatch dog: %s is %s ' % (tm.name,str(alive) ))
+              if not alive :
+                  logging.info('whatch dog: One threads is not alive' )
+                  mt.t.remove(tm)
+                  tt=pyonenet.pyonenet_core.PyonenetThread( tm.dbm,tm.logging)
+                  tt.start()
+                  logging.info('whatch dog: started a new one' )
+                  mt.t.append(tt)
+
+          logging.info('whatch dog: sleep 60' )
+          time.sleep(60)
+              
+      logging.info('All threads terminated' )
+      logging.info('Stopped for no more threads')
+
+      return 0
+      
+    except KeyboardInterrupt :
+
+      #print " KeyboardInterrupt"
+
+      for tm in mt.t:
+          tm.stop()
+
+      for tm in mt.t:
+          tm.join()
+                  
+      logging.info('All threads terminated for keyboard interrupt' )
+
+      return 1
+
+    except SystemExit:
+
+        logging.info('Stopped OK')
+        return 0
+
+    except:
+
+      import traceback
+      msg = traceback.format_exc()
+      logging.error(msg)
+      logging.info('Stopped for exception')
+
+      return 2
+
+
+    else:
+      msg = "error without traceback; what happens ?!?!"
+      logging.error(msg)
+      logging.info('Stopped')
+
+      return 3
+
+    
+if __name__ == '__main__':
+
+    import sys, os
+    cwd=os.getcwd()
+
+    if pyonenetd.service():
+
+        sys.stdout.write("Daemon started with pid %d\n" % os.getpid())
+        sys.stdout.write("Daemon stdout output\n")
+        sys.stderr.write("Daemon stderr output\n")
+
+        sys.exit(main(cwd))  # (this code was run as script)
+    

@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*\#
+django.mo
+pyonenet.sqlite3
+*~
+build
+dist
+pyonenet.egg-info
+logrpc.txt
+media
+rpc.log
